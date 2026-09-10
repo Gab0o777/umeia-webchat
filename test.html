@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Umeia widget — local test page</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: sans-serif; max-width: 640px; margin: 60px auto; padding: 0 20px; color: #222; }
+    code { background: #f2f2f2; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Umeia widget — test page</h1>
+  <p>
+    This page embeds the widget pointed at a local umeiacore instance
+    (<code>http://localhost:8000</code>) for tenant <code>infoumeiaio</code>.
+    Run <code>uvicorn main:app --reload</code> in <code>umeiacore/</code> first,
+    then open this file directly in a browser (or serve it with
+    <code>python3 -m http.server 5500</code> to match the origin already
+    allow-listed in <code>tenant_configs/infoumeiaio.json</code>).
+  </p>
+  <p>Click the bubble in the bottom-right corner to open the chat.</p>
+
+  <script
+    src="./widget.js"
+    data-tenant="infoumeiaio"
+    data-api-base="http://localhost:8000"
+    data-title="Umeia Team"
+    async
+  ></script>
+</body>
+</html>
