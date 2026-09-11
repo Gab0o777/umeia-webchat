@@ -2,13 +2,13 @@
  * Umeia webchat widget — floating chat bubble embeddable on any website.
  *
  * Embed with:
- *   <script src="https://widget.umeia.io/widget.js" data-tenant="infoumeiaio" async></script>
+ *   <script src="https://webchat.umeia.io/widget.js" data-tenant="TENANT_SLUG" async></script>
  *
  * Optional data-attributes on the same <script> tag:
  *   data-api-base    umeiacore base URL (default: https://umeia.space)
  *   data-color       accent color, any valid CSS color (default: #6c3ce0)
  *   data-position    "bottom-right" | "bottom-left" (default: bottom-right)
- *   data-title       header name (default: "Umeia")
+ *   data-title       header name (default: "Umeia Team")
  *   data-subtitle    small line under the header name (default: "En línea")
  *   data-greeting    bold greeting line in the header (default: "¡Hola! 👋")
  *   data-description line under the greeting (default: "¿En qué te puedo ayudar hoy?")

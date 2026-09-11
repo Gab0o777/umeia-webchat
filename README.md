@@ -9,11 +9,17 @@ tenant's bot on [umeiacore](../umeiacore) over its `webchat` channel
 
 ```html
 <script
-  src="https://widget.umeia.io/widget.js"
-  data-tenant="infoumeiaio"
+  src="https://webchat.umeia.io/widget.js"
+  data-tenant="TENANT_SLUG"
   async
 ></script>
 ```
+
+Replace `TENANT_SLUG` with that client's tenant id (matching a
+`tenant_configs/<slug>.json` in umeiacore — e.g. `infoumeiaio` for the
+umeia.io/EspressoDevs demo tenant). Everything else in the snippet is the
+same for every client; only `data-tenant` (and optionally the cosmetic
+attributes below) changes per site.
 
 Optional attributes on the same tag:
 
@@ -22,7 +28,10 @@ Optional attributes on the same tag:
 | `data-api-base` | `https://umeia.space` | umeiacore base URL |
 | `data-color` | `#6c3ce0` | accent color |
 | `data-position` | `bottom-right` | `bottom-right` \| `bottom-left` |
-| `data-title` | `Umeia` | chat panel header title |
+| `data-title` | `Umeia Team` | chat panel header title |
+| `data-subtitle` | `En línea` | small line under the header title |
+| `data-greeting` | `¡Hola! 👋` | bold greeting line in the header |
+| `data-description` | `¿En qué te puedo ayudar hoy?` | line under the greeting |
 
 Each tenant must have a matching `webhook_mapping.webchat.allowed_origins`
 entry in its `tenant_configs/*.json` (umeiacore) listing the exact origin(s)
@@ -61,13 +70,12 @@ actually run on a real site.)
 
 ## Deploy
 
-Static hosting (Vercel, matching `umeia-slackbot`'s deploy pattern):
-
-```
-vercel deploy --prod
-```
+Static hosting on Vercel (project `umeia-webchat`), connected to this
+repo's GitHub remote for auto-deploy — every push to `main` deploys to
+production automatically, no manual `vercel deploy --prod` needed.
 
 `vercel.json` here is intentionally minimal — no framework, just serves the
-files in this directory as-is. Point `widget.umeia.io` at the deployment,
-and update each tenant's embed snippet / `data-api-base` once umeiacore's
-real public URL is known.
+files in this directory as-is, plus a redirect from `/` to `/test.html`
+(the domain has no other homepage). Custom domain: `webchat.umeia.io`
+(CNAME to the project-specific `*.vercel-dns-*.com` value Vercel shows
+under Project → Domains — do not reuse another project's CNAME value).
