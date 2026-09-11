@@ -215,10 +215,22 @@
     "  background-size: cover; background-position: center;",
     "}",
     ".umeia-team-avatar:first-child { margin-left: 0; }",
+    ".umeia-kebab-wrap { position: relative; flex-shrink: 0; }",
     ".umeia-kebab {",
-    "  background: transparent; border: none; color: rgba(255,255,255,.85); font-size: 16px; cursor: default;",
+    "  background: transparent; border: none; color: rgba(255,255,255,.85); font-size: 16px; cursor: pointer;",
     "  line-height: 1; width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; letter-spacing: 1px;",
     "}",
+    ".umeia-kebab:hover { background: rgba(255,255,255,.15); }",
+    ".umeia-kebab-menu {",
+    "  display: none; position: absolute; top: 28px; " + POSITION + ": 0; z-index: 5;",
+    "  background: #fff; border-radius: 12px; box-shadow: 0 8px 28px rgba(20,10,50,.22); padding: 6px; min-width: 190px;",
+    "}",
+    ".umeia-kebab-menu.umeia-open { display: block; }",
+    ".umeia-kebab-menu button {",
+    "  display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 10px; border: none; background: none;",
+    "  border-radius: 8px; font-size: 13px; color: #2a2440; cursor: pointer; text-align: left; font-family: inherit;",
+    "}",
+    ".umeia-kebab-menu button:hover { background: #f4f2fa; }",
     ".umeia-close {",
     "  background: rgba(255,255,255,.12); border: none; color: #fff; font-size: 18px; cursor: pointer;",
     "  line-height: 1; width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;",
@@ -400,7 +412,12 @@
     '        <span class="umeia-team-avatar" style="background-image:url(' + TEAM_AVATAR_2 + ')"></span>' +
     '        <span class="umeia-team-avatar" style="background-image:url(' + TEAM_AVATAR_3 + ')"></span>' +
     "      </div>" +
-    '      <button class="umeia-kebab" aria-hidden="true" tabindex="-1">⋮</button>' +
+    '      <div class="umeia-kebab-wrap">' +
+    '        <button class="umeia-kebab" aria-label="Opciones">⋮</button>' +
+    '        <div class="umeia-kebab-menu">' +
+    '          <button class="umeia-reset-btn" type="button">🔄 Reiniciar conversación</button>' +
+    "        </div>" +
+    "      </div>" +
     '      <button class="umeia-close" aria-label="Cerrar chat">×</button>' +
     "    </div>" +
     "  </div>" +
@@ -460,6 +477,9 @@
   var attachBtn = panel.querySelector(".umeia-attach-btn");
   var fileInput = panel.querySelector(".umeia-file-input");
   var attachChip = panel.querySelector(".umeia-attach-chip");
+  var kebabBtn = panel.querySelector(".umeia-kebab");
+  var kebabMenu = panel.querySelector(".umeia-kebab-menu");
+  var resetBtn = panel.querySelector(".umeia-reset-btn");
 
   var transcript = loadTranscript();
   var conversationId = getConversationId();
@@ -705,6 +725,31 @@
     if (path.indexOf(emojiPicker) === -1 && path.indexOf(emojiBtn) === -1) {
       emojiPicker.classList.remove("umeia-open");
     }
+    if (path.indexOf(kebabMenu) === -1 && path.indexOf(kebabBtn) === -1) {
+      kebabMenu.classList.remove("umeia-open");
+    }
+  });
+
+  kebabBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    kebabMenu.classList.toggle("umeia-open");
+  });
+
+  // Starts a brand-new conversation_id server-side and wipes this browser's
+  // cached transcript/id — the only way to escape a stuck menu-flow state
+  // (e.g. mid-form) or a long history that was confusing the LLM classifier
+  // on later messages, short of clearing localStorage by hand.
+  resetBtn.addEventListener("click", function () {
+    kebabMenu.classList.remove("umeia-open");
+    try {
+      localStorage.removeItem(CONVERSATION_KEY);
+      localStorage.removeItem(TRANSCRIPT_KEY);
+    } catch (e) { /* localStorage unavailable — in-memory reset still helps */ }
+    conversationId = getConversationId();
+    transcript = [];
+    messagesEl.scrollTop = 0;
+    renderAll();
+    updateQrCollapse();
   });
 
   attachBtn.addEventListener("click", function () {
