@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Umeia widget — local test page</title>
+  <title>Umeia widget — demo page</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body { font-family: sans-serif; max-width: 640px; margin: 60px auto; padding: 0 20px; color: #222; }
@@ -10,21 +10,29 @@
   </style>
 </head>
 <body>
-  <h1>Umeia widget — test page</h1>
+  <h1>Umeia widget — demo page</h1>
   <p>
-    This page embeds the widget pointed at a local umeiacore instance
-    (<code>http://localhost:8000</code>) for tenant <code>infoumeiaio</code>.
-    Run <code>uvicorn main:app --reload</code> in <code>umeiacore/</code> first,
-    then open this file directly in a browser (or serve it with
-    <code>python3 -m http.server 5500</code> to match the origin already
-    allow-listed in <code>tenant_configs/infoumeiaio.json</code>).
+    This page embeds the widget pointed at the real production umeiacore
+    (<code>https://umeia.space</code>) for tenant <code>infoumeiaio</code>,
+    served from this same domain (<code>webchat.umeia.io</code>) — it's what
+    loads when a browser hits this URL directly, since the domain's root
+    has no page of its own (this project only serves <code>widget.js</code>
+    as a static asset).
+  </p>
+  <p>
+    To point at a <b>local</b> umeiacore instead (for engine changes, not
+    widget-only changes): run <code>uvicorn main:app --reload</code> in
+    <code>umeiacore/</code>, then change <code>data-api-base</code> below to
+    <code>http://localhost:8000</code> and open this file directly (or serve
+    it with <code>python3 -m http.server 5500</code> to match the origin
+    already allow-listed in <code>tenant_configs/infoumeiaio.json</code>).
   </p>
   <p>Click the bubble in the bottom-right corner to open the chat.</p>
 
   <script
     src="./widget.js"
     data-tenant="infoumeiaio"
-    data-api-base="http://localhost:8000"
+    data-api-base="https://umeia.space"
     data-title="Umeia Team"
     async
   ></script>
