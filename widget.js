@@ -507,9 +507,22 @@
   // start appearing until the full list is almost entirely tucked away.
   var QR_FADE_SPLIT = 0.7;
 
+  // qrCard sits above messagesEl in the flex column, so resizing it changes
+  // messagesEl's own available height — which can clamp messagesEl's
+  // scrollTop, firing another "scroll" event that recomputes this same
+  // height again. With very little content (right after the very first
+  // message, exactly where scrollHeight sits close to clientHeight) that
+  // becomes a real feedback loop: a visible 1-2px up/down jitter. The
+  // deadband below breaks it by skipping re-applications that wouldn't
+  // move the needle anyway.
+  var QR_HEIGHT_DEADBAND = 0.5;
+  var lastAppliedQrHeight = null;
+
   function updateQrCollapse() {
     var progress = Math.max(0, Math.min(1, messagesEl.scrollTop / QR_COLLAPSE_RANGE));
     var height = qrNaturalHeight + (QR_COLLAPSED_HEIGHT - qrNaturalHeight) * progress;
+    if (lastAppliedQrHeight !== null && Math.abs(height - lastAppliedQrHeight) < QR_HEIGHT_DEADBAND) return;
+    lastAppliedQrHeight = height;
     var fullOpacity = Math.max(0, Math.min(1, 1 - progress / QR_FADE_SPLIT));
     var collapsedOpacity = Math.max(0, Math.min(1, (progress - QR_FADE_SPLIT) / (1 - QR_FADE_SPLIT)));
     qrCard.style.height = height + "px";
@@ -868,6 +881,7 @@
     // offsetHeight only resolves once the panel is actually laid out
     // (display:none ancestors report 0), so measure on open, not at init.
     qrNaturalHeight = qrFull.offsetHeight;
+    lastAppliedQrHeight = null;
     updateQrCollapse();
     syncMobileViewportHeight();
     if (isMobileLayout()) {
