@@ -148,7 +148,7 @@
 
     ".umeia-panel {",
     "  position: fixed; bottom: 92px; " + POSITION + ": 20px; z-index: 2147483000;",
-    "  width: 340px; max-width: calc(100vw - 40px); height: 640px; max-height: calc(100vh - 100px);",
+    "  width: 380px; max-width: calc(100vw - 40px); height: 640px; max-height: calc(100vh - 100px);",
     "  background: #fff; border-radius: 20px; box-shadow: 0 12px 40px rgba(20,10,50,0.25);",
     "  display: none; flex-direction: column; overflow: hidden;",
     "  transform-origin: bottom " + POSITION + ";",
@@ -191,7 +191,14 @@
 
     // Header — dark gradient, holds identity row + a persistent greeting.
     ".umeia-header {",
-    "  position: relative; overflow: hidden;",
+    // Explicit z-index (not just position:relative) so this whole header —
+    // including the kebab dropdown menu inside it — paints above
+    // .umeia-quickreplies, which has its own z-index:1 and a negative
+    // top-margin that pulls it up into the header's box. Without this, the
+    // header defaulted to the stacking-context equivalent of z-index:0 and
+    // the quickreplies card silently intercepted clicks on the lower half
+    // of the kebab menu (it was visible, just not the actual click target).
+    "  position: relative; z-index: 2; overflow: hidden;",
     "  background: linear-gradient(155deg, #140b28 0%, color-mix(in srgb, " + ACCENT_COLOR + " 55%, #140b28 45%) 130%);",
     "  color: #fff; padding: 14px 16px 46px; flex-shrink: 0;",
     "}",
@@ -579,11 +586,42 @@
     });
   }
 
+  // Synthesized two-tone "ding" (no external asset — keeps this file
+  // dependency-free) played whenever a bot reply actually arrives live.
+  // Deliberately NOT called from renderAll()'s replay of cached transcript
+  // on page load/reset, only from pushMessage's "bot" branch below, so
+  // reopening the widget doesn't make noise for old messages.
+  var audioCtx = null;
+  function playNotificationSound() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtx) audioCtx = new Ctx();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      var now = audioCtx.currentTime;
+      [[880, now, 0.09], [1318.5, now + 0.09, 0.11]].forEach(function (tone) {
+        var freq = tone[0], start = tone[1], dur = tone[2];
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.15, start + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(start);
+        osc.stop(start + dur + 0.02);
+      });
+    } catch (e) { /* audio unavailable — never block the actual message */ }
+  }
+
   function pushMessage(role, text) {
     var ts = Date.now();
     transcript.push({ role: role, text: text, ts: ts });
     saveTranscript(transcript);
     renderMessage(role, text, ts);
+    if (role === "bot") playNotificationSound();
   }
 
   function setSending(value) {
@@ -750,6 +788,7 @@
     messagesEl.scrollTop = 0;
     renderAll();
     updateQrCollapse();
+    maybeGreet();
   });
 
   attachBtn.addEventListener("click", function () {
@@ -811,11 +850,21 @@
   }
   window.addEventListener("resize", syncMobileViewportHeight);
 
+  // Silently sends "hola" (no visible user bubble — sendToServer only
+  // renders the reply) so the tenant's own configured greeting shows up as
+  // a real first message, instead of only the static header text. Safe to
+  // call any time transcript is empty (first-ever open, or right after a
+  // reset) — a non-empty transcript means this already happened.
+  function maybeGreet() {
+    if (transcript.length === 0) sendToServer("hola");
+  }
+
   var opened = false;
   function openPanel() {
     panel.classList.add("umeia-open");
     root.classList.add("umeia-panel-open");
     opened = true;
+    maybeGreet();
     // offsetHeight only resolves once the panel is actually laid out
     // (display:none ancestors report 0), so measure on open, not at init.
     qrNaturalHeight = qrFull.offsetHeight;
