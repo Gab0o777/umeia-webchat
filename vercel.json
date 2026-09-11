@@ -2,5 +2,8 @@
   "version": 2,
   "redirects": [
     { "source": "/", "destination": "/test.html", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/adultos2000", "destination": "/adultos2000.html" }
   ]
 }

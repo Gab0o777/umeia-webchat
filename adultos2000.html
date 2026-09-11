@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Adultos 2000 — Fundación El Futbolista</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #6b6b6b;
+    --line: #e7e7e7;
+    --navy: #16263c;
+    --teal: #8fe9df;
+    --yellow: #f4c531;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #fff;
+  }
+  a { color: inherit; }
+  img { max-width: 100%; display: block; }
+
+  /* ---------- Header ---------- */
+  header.site-header {
+    background: #000;
+    padding: 0 40px;
+  }
+  .header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 18px 0;
+  }
+  .logo img { height: 46px; width: auto; }
+  nav.main-nav {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    flex: 1;
+    justify-content: center;
+  }
+  nav.main-nav a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 15px;
+    white-space: nowrap;
+    padding-bottom: 4px;
+  }
+  nav.main-nav a.active {
+    border-bottom: 2px solid #fff;
+  }
+  .search-box {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border-radius: 3px;
+    overflow: hidden;
+    width: 220px;
+  }
+  .search-box input {
+    border: none;
+    outline: none;
+    padding: 9px 12px;
+    font-size: 14px;
+    flex: 1;
+    min-width: 0;
+  }
+  .search-box button {
+    border: none;
+    background: #fff;
+    padding: 0 12px;
+    cursor: pointer;
+    font-size: 16px;
+    color: #333;
+  }
+
+  /* ---------- Layout ---------- */
+  .page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+  .breadcrumb {
+    padding: 20px 0 14px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .breadcrumb a { color: var(--muted); text-decoration: none; }
+  hr.rule {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 0;
+  }
+  .content-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 60px;
+    padding-top: 30px;
+  }
+
+  h1.article-title {
+    font-size: 56px;
+    font-weight: 700;
+    margin: 0 0 20px;
+    letter-spacing: -0.5px;
+  }
+  .byline-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 28px;
+  }
+  .byline {
+    font-size: 15px;
+    color: var(--muted);
+  }
+  .byline a { color: var(--ink); text-decoration: none; font-weight: 600; }
+  .share-buttons { display: flex; gap: 10px; }
+  .share-buttons a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 9px 20px;
+    border-radius: 20px;
+  }
+  .share-tweet { background: #1da1f2; }
+  .share-facebook { background: #3b5998; }
+  .share-google { background: #dd4b39; }
+
+  .banner-finaliza { border-radius: 2px; margin-bottom: 28px; }
+
+  article p {
+    font-size: 17px;
+    line-height: 1.7;
+    margin: 0 0 18px;
+    color: #262626;
+  }
+  article h2 {
+    font-size: 26px;
+    margin: 36px 0 16px;
+  }
+  article ul, article ol {
+    font-size: 17px;
+    line-height: 1.7;
+    color: #262626;
+    padding-left: 22px;
+    margin: 0 0 18px;
+  }
+  article li { margin-bottom: 10px; }
+
+  .diagrama-modulos { margin: 10px 0 30px; }
+
+  .campus-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    border-radius: 6px;
+    padding: 18px 32px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #2ab7c9;
+    text-decoration: none;
+    margin: 10px 0 34px;
+  }
+  .campus-btn span.arrow { font-size: 20px; }
+
+  .inline-cta {
+    display: inline-block;
+    background: var(--navy);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    padding: 14px 28px;
+    border-radius: 4px;
+    margin: 6px 0 24px;
+  }
+  .inline-cta:hover { background: #0f1c2e; }
+
+  .note-box {
+    background: #f5f5f5;
+    border-left: 4px solid var(--yellow);
+    padding: 16px 20px;
+    font-size: 15px;
+    color: #333;
+    margin: 0 0 24px;
+  }
+
+  .tags-line {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 30px;
+  }
+  .written-by {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 6px;
+    margin-bottom: 40px;
+  }
+
+  /* ---------- Sidebar ---------- */
+  aside.sidebar { padding-top: 4px; }
+  .sidebar-block { margin-bottom: 34px; }
+  .sidebar-heading {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin: 0 0 14px;
+  }
+
+  /* ---------- Footer ---------- */
+  .footer-logos {
+    padding: 40px 0;
+    border-top: 1px solid var(--line);
+    margin-top: 40px;
+  }
+  footer.site-footer {
+    background: #111;
+    color: #e2e2e2;
+    padding: 44px 0 24px;
+  }
+  .footer-grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+    display: grid;
+    grid-template-columns: 2fr 2fr 1.4fr 1.4fr;
+    gap: 30px;
+  }
+  .footer-grid h4 {
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    margin: 0 0 14px;
+    color: #fff;
+  }
+  .footer-grid p { font-size: 14px; line-height: 1.7; color: #b7b7b7; margin: 0; }
+  .app-badges-footer img { width: 190px; margin-bottom: 10px; }
+  .social-icons { display: flex; gap: 10px; }
+  .social-icons a {
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 3px;
+    text-decoration: none;
+    color: #fff;
+    font-size: 18px;
+  }
+  .social-icons .fb { background: #3b5998; }
+  .social-icons .ig { background: #8a6d5c; }
+  .social-icons .yt { background: #e0402d; }
+  .copyright {
+    max-width: 1400px;
+    margin: 40px auto 0;
+    padding: 20px 40px 0;
+    border-top: 1px solid #2a2a2a;
+    font-size: 13px;
+    color: #8a8a8a;
+  }
+
+  @media (max-width: 980px) {
+    .content-grid { grid-template-columns: 1fr; }
+    nav.main-nav { display: none; }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="#"><img src="assets/adultos2000/logo_efutbolista.png" alt="Fundación El Futbolista" /></a>
+    <nav class="main-nav">
+      <a href="#">Inicio</a>
+      <a href="#" class="active">Secundario ▾</a>
+      <a href="#">Convenios ▾</a>
+      <a href="#">Cursos ▾</a>
+      <a href="#">Charlas ▾</a>
+      <a href="#">Nosotros ▾</a>
+      <a href="#">Ingresar al Campus</a>
+    </nav>
+    <form class="search-box" onsubmit="return false;">
+      <input type="text" placeholder="Buscar ..." />
+      <button type="submit">🔍</button>
+    </form>
+  </div>
+</header>
+
+<div class="page">
+  <div class="breadcrumb"><a href="#">Home</a> » <a href="#">General</a></div>
+  <hr class="rule" />
+
+  <div class="content-grid">
+    <article>
+      <h1 class="article-title">Adultos 2000</h1>
+
+      <div class="byline-row">
+        <div class="byline">Por <a href="#">Fundación el Futbolista</a> · en <a href="#">General</a></div>
+        <div class="share-buttons">
+          <a class="share-tweet" href="#">🐦 Tweet</a>
+          <a class="share-facebook" href="#">f Share</a>
+          <a class="share-google" href="#">G+ Share</a>
+        </div>
+      </div>
+
+      <img class="banner-finaliza" src="assets/adultos2000/banner_finaliza.png" alt="Finalizá el secundario" />
+
+      <p>Dentro de la propuesta educativa de la Fundación El Futbolista, se ofrece a todos/as los/as futbolistas y familiares, la posibilidad de retomar y concluir los estudios secundarios mediante el programa Adultos 2000.</p>
+
+      <p>El Programa Adultos 2000 se caracteriza por ser un sistema de educación a distancia y acelerado, con alcance nacional, diseñado para que jóvenes y adultos (mayores de 16 años) obtengan el título de “Bachiller con Orientación en Ciencias Sociales y Humanidades” con reconocimiento oficial.<br />
+      Este programa depende de la Dirección del Área del Adulto y del Adolescente del Ministerio de Educación de la Ciudad Autónoma de Buenos Aires.</p>
+
+      <p>La estructura curricular comprende 23 materias organizadas en 6 módulos con distintos ejes temáticos y deben articularse de acuerdo al cuadro de correlatividades requeridas.<br />
+      Conozcamos cómo se organizan los módulos y las materias:</p>
+
+      <img class="diagrama-modulos" src="assets/adultos2000/diagrama_modulos.png" alt="Plan de estudios 2026 — estructura modular" />
+
+      <p>Cada materia consta de un aula virtual que comprende herramientas tales como: el programa de la materia, la bibliografía obligatoria, 4 trabajos prácticos, actividades, consultorías sincrónicas (no obligatorias) y el examen.</p>
+
+      <p>Las cursadas se realizan a través del Campus virtual:</p>
+
+      <a class="campus-btn" href="#">Campus virtual <span class="arrow">→</span></a>
+
+      <p>Para preparar las materias y poder rendir los exámenes, hay que transitar distintas etapas obligatorias tales como:</p>
+
+      <ul>
+        <li><strong>Inscripción a materia:</strong> Se realiza mediante el SIU GUARANÍ. Los/as alumnos/as deberán seleccionar hasta 4 materias respetando las correlatividades.</li>
+        <li><strong>Entrega de 4 trabajos prácticos.</strong> Se realizan en el Campus virtual. Si el/la alumno/a tiene los 4 trabajos prácticos realizados y aprobados, la materia será tomada como aprobada y no deberá realizar examen.</li>
+        <li><strong>Inscripción a exámen:</strong> Se realiza a través del SIU GUARANÍ. Los/as alumnos/as que no hayan realizado y/o aprobado los 4 trabajos prácticos, deberán inscribirse al examen, seleccionarán la fecha y horario que quieren y pueden rendir las materias que estuvieron preparando.</li>
+        <li><strong>Período de examen:</strong> Se rinden a través del campus virtual en la fecha y horario seleccionado. La modalidad es multiple choice y se aprueban con 6.</li>
+        <li>El/La alumno/a del programa podrá ir rindiendo exámenes de las materias adeudadas que figuran en el cuadro de equivalencias (situación académica). Estará habilitado a rendir cuatro materias por fecha, siempre que no sean correlativas.</li>
+        <li>Las fechas de exámenes son en mayo, septiembre y diciembre.</li>
+        <li>Es requisito indispensable tener 18 años cumplidos y poseer la documentación escolar completa y legalizada para poder egresar y obtener el título secundario.</li>
+      </ul>
+
+      <h2>Requisitos para inscripción:</h2>
+      <ul>
+        <li>Cuenta personal de correo electrónico.</li>
+        <li>Presentar DNI.</li>
+        <li>Presentar documentación escolar*.</li>
+        <li>Carta de adulto responsable en caso de que el alumno sea menor.</li>
+      </ul>
+
+      <p><em>*Documentación escolar:</em></p>
+      <ul>
+        <li><strong>Para iniciar el secundario:</strong><br />
+          Si nunca comenzaste con la escuela media (secundaria) debes presentar el certificado legalizado de Estudios primarios terminados.</li>
+        <li><strong>Para retomar o continuar el secundario:</strong><br />
+          Si aprobaste algún año de la escuela media y el último colegio en el que cursaste es de CABA o PROVINCIA, debes acercarte al colegio y presentar una CONSTANCIA DE VACANTE (<a href="#">solicitala aquí</a> y la recibirás en un plazo aproximado a 7 días por whatsapp)</li>
+      </ul>
+
+      <p>Una vez que presentes la constancia de vacante en el colegio, deberás solicitar una “constancia de pase” -para colegios de CABA- o una “constancia de analítico en trámite” -para colegios de Provincia– con fecha actualizada, número de plan de estudios, especialidad y materias adeudadas. La misma será una documentación provisoria que te habilitará a realizar la inscripción y comenzar a estudiar.</p>
+
+      <p>¿Ya contás con toda la documentación?</p>
+      <a class="inline-cta" href="#">SI, ME QUIERO INSCRIBIR</a>
+
+      <div class="note-box">El WhatsApp de la Fundación El Futbolista es de atención al público y funciona de lunes a viernes de 14 a 18 hs.</div>
+
+      <p>Luego de inscripto, se deberá completar la documentación original legalizada.*</p>
+
+      <p><em>*La documentación legalizada de escuelas de CABA se gestiona de manera interna entre las instituciones, por lo que solo se debe esperar un plazo de 60 a 90 días para que se complete en Adultos 2000. En el caso de escuelas de la provincia de Buenos Aires o del interior del país, la legalización se deberá realizar de forma particular, retirando el analítico parcial de la escuela y luego realizar la legalización correspondiente. ¿Cómo legalizar la documentacion? <a href="#">Click aqui</a>.</em></p>
+
+      <p>• Contacto de carácter administrativo con el Programa Adultos 2000:</p>
+
+      <div class="tags-line">Tags: Capacitación educación familiares FEF finalizar Formación Fundación El Futbolista fútbol Futbolistas gratis Secundario</div>
+      <div class="written-by">Escrito por Fundación el Futbolista</div>
+    </article>
+
+    <aside class="sidebar">
+      <div class="sidebar-block">
+        <img src="assets/adultos2000/sidebar_entrevistas.png" alt="Entrevistas" />
+      </div>
+      <div class="sidebar-block">
+        <div class="sidebar-heading">DESCARGA NUESTRA APP !</div>
+        <img src="assets/adultos2000/app_badges.png" alt="Disponible en App Store y Google Play" />
+      </div>
+      <div class="sidebar-block">
+        <img src="assets/adultos2000/paz_en_el_futbol.png" alt="#PazEnElFutbol" />
+      </div>
+      <div class="sidebar-block">
+        <div class="sidebar-heading">ALUMNOS TV – KEVIN DANERI</div>
+        <img src="assets/adultos2000/alumnos_tv.png" alt="Alumnos TV - Kevin Daneri" />
+      </div>
+    </aside>
+  </div>
+
+  <div class="footer-logos">
+    <img src="assets/adultos2000/footer_logos.png" alt="Instituciones y convenios" />
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-grid">
+    <div>
+      <h4>MISION</h4>
+      <p>Elevar la calidad de vida de los futbolistas y de sus familiares fomentando su desarrollo individual, social y educativo. A tal fin se desarrollan diferentes estrategias, que priorizan el desarrollo individual y social de las personas.</p>
+    </div>
+    <div>
+      <h4>CONTACTO</h4>
+      <p>Fundación El Futbolista<br />
+      Av. Independencia 532 PB, (1099), CABA.<br />
+      Tel: (5411)4362-7538/7160/7329<br />
+      Fax: (5411)4362-7474<br />
+      fundacion@elfutbolista.com.ar</p>
+    </div>
+    <div>
+      <h4>DESCARGA NUESTRA APP !</h4>
+      <div class="app-badges-footer">
+        <img src="assets/adultos2000/app_badges.png" alt="Disponible en App Store y Google Play" />
+      </div>
+    </div>
+    <div>
+      <h4>REDES SOCIALES</h4>
+      <div class="social-icons">
+        <a class="fb" href="#">f</a>
+        <a class="ig" href="#">◎</a>
+        <a class="yt" href="#">▶</a>
+      </div>
+    </div>
+  </div>
+  <div class="copyright">Copyright © 2019 — Fundación el Futbolista. All Rights Reserved</div>
+</footer>
+
+<script
+  src="./widget.js"
+  data-tenant="gremio"
+  data-title="Fundación El Futbolista"
+  data-subtitle="En línea"
+  data-greeting="¡Hola! 👋"
+  data-description="¿En qué te puedo ayudar hoy?"
+  data-color="#16263c"
+  async
+></script>
+
+</body>
+</html>
