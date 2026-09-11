@@ -148,7 +148,7 @@
 
     ".umeia-panel {",
     "  position: fixed; bottom: 92px; " + POSITION + ": 20px; z-index: 2147483000;",
-    "  width: 340px; max-width: calc(100vw - 40px); height: 540px; max-height: calc(100vh - 140px);",
+    "  width: 340px; max-width: calc(100vw - 40px); height: 640px; max-height: calc(100vh - 100px);",
     "  background: #fff; border-radius: 20px; box-shadow: 0 12px 40px rgba(20,10,50,0.25);",
     "  display: none; flex-direction: column; overflow: hidden;",
     "  transform-origin: bottom " + POSITION + ";",
