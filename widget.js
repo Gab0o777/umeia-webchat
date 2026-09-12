@@ -909,6 +909,17 @@
   inputEl.addEventListener("keydown", function (e) {
     if (e.key === "Enter") handleSend();
   });
+  // Focusing the input (not just sending) opens the on-screen keyboard on
+  // mobile, which shrinks the fullscreen sheet's visible height
+  // (syncMobileViewportHeight tracks visualViewport). If the quick-replies
+  // card is still expanded at that point (visitor hasn't picked one), its
+  // ~230px plus the header/inputrow/footer no longer fit the shrunk panel —
+  // same overflow this already guards against elsewhere, just triggered by
+  // the keyboard shrinking the panel instead of a tall header growing it —
+  // and focusing then auto-scrolls the (now scrollable) panel, dragging the
+  // header half out of frame. Tapping the input to type your own message is
+  // just as much "engaging" as sending one, so retire the card right away.
+  inputEl.addEventListener("focus", hideQuickReplies);
 
   emojiBtn.addEventListener("click", function (e) {
     e.stopPropagation();
@@ -1004,12 +1015,29 @@
     return !!(MOBILE_MEDIA && MOBILE_MEDIA.matches);
   }
 
+  // Baseline (no keyboard) visible height, captured the first time this
+  // runs on mobile — see the keyboard-shrink check below.
+  var initialViewportHeight = null;
+
   function syncMobileViewportHeight() {
     if (!isMobileLayout()) {
       panel.style.height = "";
       return;
     }
     var vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    if (initialViewportHeight === null) {
+      initialViewportHeight = vh;
+    } else if (vh < initialViewportHeight - 100) {
+      // The visible area shrank meaningfully after we already saw its full
+      // size once — almost always the on-screen keyboard opening. The
+      // quick-replies card (still expanded pre-first-message) plus
+      // header/inputrow/footer can then no longer fit this smaller height,
+      // and the focused input's native "scroll into view" drags the header
+      // half off-screen (same overflow inputEl's "focus" listener already
+      // guards against — this is a fallback in case that somehow didn't run
+      // first, e.g. focus via something other than a direct tap).
+      hideQuickReplies();
+    }
     panel.style.height = vh + "px";
   }
 
