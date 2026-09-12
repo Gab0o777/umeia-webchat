@@ -73,6 +73,10 @@
   var DEMO_LABEL = scriptTag.getAttribute("data-demo-label") || "Agendar demo";
   var DEMO_REPLY = scriptTag.getAttribute("data-demo-reply") || DEMO_LABEL;
   var DEMO_ICON = scriptTag.getAttribute("data-demo-icon") || "calendar";
+  // Mobile collapses into this generic pill instead of the demo one — see
+  // collapseQuickReplies — since tapping it opens the quick-replies sheet
+  // rather than sending DEMO_REPLY straight away.
+  var QR_MOBILE_LABEL = "Acciones rápidas";
   var HIDE_FIRST_REPLY = scriptTag.getAttribute("data-hide-first-reply") === "true";
 
   // Umeia "U" mark (from umeia-projects/umeia-client-insights public/umeia-icon.png),
@@ -253,12 +257,17 @@
     "    border-radius: 0;",
     "  }",
     "  .umeia-root.umeia-panel-open .umeia-bubble-wrap { display: none; }",
-    // iOS Safari (and some other mobile browsers) auto-zooms the page on
-    // focusing any input with a computed font-size under 16px, as an
-    // accessibility measure for legibility — visible as a small, jarring
-    // zoom-in the instant you tap the message field. 16px sidesteps that
-    // entirely; kept mobile-only so the desktop input's 14px is untouched.
-    "  .umeia-pill input { font-size: 16px; }",
+    // Toggled by JS (setKeyboardOpen, driven by syncMobileViewportHeight's
+    // keyboard-shrink detection) once the on-screen keyboard is up: the
+    // greeting line is dead space the visitor can't see anyway with the
+    // input focused, and the floating quick-replies pill is one more thing
+    // competing for the little room that's left above the keyboard — both
+    // go away so the header reads as a single compact line and the message
+    // list gets the space back.
+    "  .umeia-kb-open .umeia-greeting { display: none; }",
+    "  .umeia-kb-open .umeia-header { padding-bottom: 14px; }",
+    "  .umeia-kb-open .umeia-qr-collapsed,",
+    "  .umeia-kb-open .umeia-qr-collapsed-backdrop { display: none; }",
     "}",
 
     // Header — dark gradient, holds identity row + a persistent greeting.
@@ -347,6 +356,17 @@
     // inside the quickreplies card and inherit that card's z-index (1, below
     // the header) — which meant its top half was always painted over by the
     // opaque header, regardless of how its own position/height were tuned.
+    // Edge-to-edge (no side inset, unlike the pill's 14px) and shadow-less so
+    // it fully occludes the pill's own box-shadow halo and rounded corners —
+    // those alone leave slivers of whatever message row is scrolled up
+    // underneath faintly visible. Sized/positioned in JS (positionQrCollapsedPill)
+    // to cover the pill's box plus its shadow's reach on every edge. Opacity
+    // is kept in lockstep with the pill's own (see updateQrCollapse/
+    // collapseQuickReplies) so it's invisible whenever the pill is.
+    ".umeia-qr-collapsed-backdrop {",
+    "  position: absolute; left: 0; right: 0; z-index: 3; background: #f7f6fb;",
+    "  opacity: 0; pointer-events: none;",
+    "}",
     ".umeia-qr-collapsed {",
     "  position: absolute; left: 14px; right: 14px; height: " + QR_PILL_HEIGHT + "px; z-index: 3;",
     "  background: #fff; border-radius: 18px; box-shadow: 0 10px 30px rgba(20,10,50,0.18);",
@@ -375,6 +395,26 @@
     ".umeia-qr-label { flex: 1; font-size: 13px; color: #201f26; }",
     ".umeia-qr-chevron { color: #c3c1cc; font-size: 16px; }",
 
+    // Mobile-only bottom sheet listing every quick reply — opened by tapping
+    // the collapsed "Acciones rápidas" pill instead of the scroll-driven
+    // collapse desktop uses (see collapseQuickReplies/qrCollapsed's click
+    // handler). Fixed-position siblings of .umeia-panel, not nested inside
+    // it, so they cover the whole viewport regardless of the panel's own
+    // overflow:hidden.
+    ".umeia-qr-sheet-backdrop {",
+    "  position: fixed; inset: 0; z-index: 2147483001; background: rgba(20,10,50,.45);",
+    "  opacity: 0; pointer-events: none; transition: opacity .25s ease;",
+    "}",
+    ".umeia-qr-sheet-backdrop.umeia-open { opacity: 1; pointer-events: auto; }",
+    ".umeia-qr-sheet {",
+    "  position: fixed; left: 0; right: 0; bottom: 0; z-index: 2147483002;",
+    "  background: #fff; border-radius: 20px 20px 0 0; padding: 10px 14px calc(env(safe-area-inset-bottom) + 14px);",
+    "  max-height: 70vh; overflow-y: auto; transform: translateY(100%);",
+    "  transition: transform .3s cubic-bezier(0.16, 1, 0.3, 1);",
+    "}",
+    ".umeia-qr-sheet.umeia-open { transform: translateY(0); }",
+    ".umeia-qr-sheet-handle { width: 36px; height: 4px; border-radius: 2px; background: #e3e1eb; margin: 2px auto 12px; }",
+
     ".umeia-date-divider { text-align: center; font-size: 11.5px; color: #a9a7b3; flex-shrink: 0; }",
 
     ".umeia-row { display: flex; gap: 8px; align-items: flex-end; }",
@@ -399,6 +439,17 @@
     ".umeia-pill:focus-within { border-color: " + ACCENT_COLOR + "; }",
     ".umeia-pill input {",
     "  border: none; background: transparent; padding: 2px 0; font-size: 14px; outline: none; width: 100%;",
+    "}",
+    // iOS Safari (and some other mobile browsers) auto-zooms the page on
+    // focusing any input with a computed font-size under 16px, as an
+    // accessibility measure for legibility — visible as a small, jarring
+    // zoom-in the instant you tap the message field. 16px sidesteps that
+    // entirely; mobile-only so desktop's 14px is untouched. Placed after
+    // the base rule above (same specificity) — a media query alone doesn't
+    // win a specificity tie, only source order does, so this has to come
+    // later in the stylesheet or it's silently overridden by the base rule.
+    "@media (max-width: 480px) {",
+    "  .umeia-pill input { font-size: 16px; }",
     "}",
     ".umeia-pill-icons { display: flex; align-items: center; gap: 12px; margin-top: 4px; position: relative; }",
     ".umeia-icon-btn {",
@@ -541,6 +592,12 @@
     quickReplyHtml() +
     "  </div>" +
     "</div>" +
+    // Plain, edge-to-edge, shadow-less backdrop painted directly behind the
+    // pill (see .umeia-qr-collapsed-backdrop CSS) so whatever message row
+    // the visitor has scrolled up under the pill is fully hidden rather than
+    // showing faintly through the pill's own rounded corners and box-shadow
+    // halo — see positionQrCollapsedPill for its sizing.
+    '<div class="umeia-qr-collapsed-backdrop"></div>' +
     // Sibling of .umeia-quickreplies (not nested inside it) so it can sit in
     // its own stacking context above .umeia-header — see the CSS comment on
     // .umeia-qr-collapsed for why. Its `top` is set from JS (see
@@ -579,6 +636,28 @@
     '<div class="umeia-footer">Powered by <a href="https://umeia.io" target="_blank" rel="noopener">Umeia</a></div>';
   root.appendChild(panel);
 
+  var qrSheetBackdrop = document.createElement("div");
+  qrSheetBackdrop.className = "umeia-qr-sheet-backdrop";
+  root.appendChild(qrSheetBackdrop);
+
+  var qrSheet = document.createElement("div");
+  qrSheet.className = "umeia-qr-sheet";
+  qrSheet.innerHTML =
+    '<div class="umeia-qr-sheet-handle"></div>' +
+    '<div class="umeia-qr-title">' + QR_TITLE + "</div>" +
+    quickReplyHtml();
+  root.appendChild(qrSheet);
+
+  function openQrSheet() {
+    qrSheetBackdrop.classList.add("umeia-open");
+    qrSheet.classList.add("umeia-open");
+  }
+  function closeQrSheet() {
+    qrSheetBackdrop.classList.remove("umeia-open");
+    qrSheet.classList.remove("umeia-open");
+  }
+  qrSheetBackdrop.addEventListener("click", closeQrSheet);
+
   var messagesEl = panel.querySelector(".umeia-messages");
   var inputEl = panel.querySelector("input");
   var sendBtn = panel.querySelector(".umeia-send");
@@ -587,6 +666,9 @@
   var qrCard = panel.querySelector(".umeia-quickreplies");
   var qrFull = panel.querySelector(".umeia-qr-full");
   var qrCollapsed = panel.querySelector(".umeia-qr-collapsed");
+  var qrCollapsedBackdrop = panel.querySelector(".umeia-qr-collapsed-backdrop");
+  var qrCollapsedIcon = panel.querySelector(".umeia-qr-collapsed-icon");
+  var qrCollapsedLabel = panel.querySelector(".umeia-qr-collapsed-label");
   var emojiBtn = panel.querySelector(".umeia-emoji-btn");
   var emojiPicker = panel.querySelector(".umeia-emoji-picker");
   var attachBtn = panel.querySelector(".umeia-attach-btn");
@@ -617,8 +699,21 @@
   // seam (half over the navy header, half over the white messages list), per
   // design. Header height varies with GREETING/DESCRIPTION length, so this
   // is computed from the actual rendered header rather than hardcoded.
+  //
+  // The backdrop behind it (.umeia-qr-collapsed-backdrop) is sized wider
+  // than just the pill's own box — it has to swallow the pill's box-shadow
+  // (0 10px 30px, i.e. ~20px reach above the box and ~40px below it) too,
+  // or the message row currently scrolled up underneath shows through
+  // faintly right at the shadow's edge as the visitor keeps scrolling past
+  // the fully-collapsed point.
+  var QR_BACKDROP_SHADOW_MARGIN_TOP = 24;
+  var QR_BACKDROP_SHADOW_MARGIN_BOTTOM = 44;
   function positionQrCollapsedPill() {
-    qrCollapsed.style.top = (header.offsetHeight - QR_PILL_HEIGHT / 2) + "px";
+    var pillTop = header.offsetHeight - QR_PILL_HEIGHT / 2;
+    qrCollapsed.style.top = pillTop + "px";
+    qrCollapsedBackdrop.style.top = (pillTop - QR_BACKDROP_SHADOW_MARGIN_TOP) + "px";
+    qrCollapsedBackdrop.style.height =
+      (QR_PILL_HEIGHT + QR_BACKDROP_SHADOW_MARGIN_TOP + QR_BACKDROP_SHADOW_MARGIN_BOTTOM) + "px";
   }
 
   // The two layers fade on non-overlapping slices of the same scroll
@@ -638,21 +733,56 @@
   var QR_HEIGHT_DEADBAND = 0.5;
   var lastAppliedQrHeight = null;
 
+  // Real conversations here are typically short — greeting, one quick-reply
+  // tap, one short answer — which almost never overflows messagesEl (its
+  // scrollHeight stays <= clientHeight). Driving collapse purely from
+  // messagesEl.scrollTop meant the tied-to-scroll behavior only ever worked
+  // in a conversation long enough to actually need a scrollbar; in the
+  // common short case there was nothing to drag, so the card could only
+  // ever reach its collapsed state via collapseQuickReplies' jump and never
+  // respond to scroll at all. qrVirtualScroll is a synthetic scroll depth
+  // (px, clamped to the same [0, QR_COLLAPSE_RANGE] the real scrollTop would
+  // use) driven directly from wheel/touch deltas whenever there's no real
+  // overflow to scroll — see the wheel/touchmove listeners below — so the
+  // collapse still tracks the visitor's drag 1:1 even with nothing to
+  // actually scroll. Once real overflow exists, messagesEl.scrollTop takes
+  // over as the source of truth (see updateQrCollapse) same as before.
+  var qrVirtualScroll = 0;
+
+  // messagesEl.clientHeight shrinks by exactly however much qrCard is
+  // currently occupying (same flex column, fixed-height ancestor) — so
+  // comparing scrollHeight against the *live* clientHeight is self-
+  // referential: while qrCard is still expanded (or mid-transition
+  // collapsing), that alone can make scrollHeight exceed it even for a
+  // short conversation that fits easily once qrCard is actually out of the
+  // way. Treating that as "real" overflow was a feedback loop — sourcing
+  // progress from a near-zero scrollTop kept recomputing height back toward
+  // natural, which shrinks clientHeight further, which keeps "overflow"
+  // true, permanently preventing the card from ever settling collapsed (and
+  // the same self-reference made the wheel/touchmove listeners below ignore
+  // further gestures once qrCard was expanded, since they used to run this
+  // same check independently). Adding qrCard's own current height back to
+  // clientHeight reconstructs the space messagesEl would have if qrCard
+  // were fully collapsed — a value that stays constant through qrCard's
+  // entire transition — so overflow only counts as real when the
+  // conversation itself is long enough to need scrolling, independent of
+  // qrCard's own current size. Shared by every caller (native scroll,
+  // wheel, touchmove) so they all agree on the same answer.
+  function hasRealMessagesOverflow() {
+    var maxMessagesClientHeight = messagesEl.clientHeight + qrCard.offsetHeight;
+    return messagesEl.scrollHeight > maxMessagesClientHeight;
+  }
+
   function updateQrCollapse() {
-    // scrollTop is 0 both when the visitor has scrolled to the top AND
-    // whenever there's simply nothing to scroll yet (a short conversation
-    // that doesn't overflow messagesEl) — those aren't distinguishable from
-    // scrollTop alone. Treating the latter as "scrolled to top" was the bug:
-    // right when collapseQuickReplies fires on engagement, the conversation
-    // is still this short (scrollTop pinned at 0 with no real overflow), so
-    // the very next scroll-driven recompute — e.g. the auto-scroll revealing
-    // the typing-indicator bubble that follows a heartbeat later — read that
-    // as "back at the top" and silently re-expanded the card straight back
-    // out. Skipping entirely while there's no real scrollable range leaves
-    // whatever collapseQuickReplies/showQuickReplies explicitly set alone
-    // until scrolling is actually meaningful.
-    if (messagesEl.scrollHeight <= messagesEl.clientHeight) return;
-    var progress = Math.max(0, Math.min(1, messagesEl.scrollTop / QR_COLLAPSE_RANGE));
+    var hasRealOverflow = hasRealMessagesOverflow();
+    var scrollDepth = hasRealOverflow ? messagesEl.scrollTop : qrVirtualScroll;
+    var progress = Math.max(0, Math.min(1, scrollDepth / QR_COLLAPSE_RANGE));
+    // Keep the virtual tracker in sync with whatever source just drove this
+    // update, so that if overflow appears/disappears later (e.g. a typing
+    // indicator briefly pushing messagesEl past its clientHeight and back)
+    // the switch between real scrollTop and qrVirtualScroll doesn't snap
+    // the card back to a stale progress.
+    qrVirtualScroll = progress * QR_COLLAPSE_RANGE;
     var height = qrNaturalHeight + (QR_COLLAPSED_HEIGHT - qrNaturalHeight) * progress;
     if (lastAppliedQrHeight !== null && Math.abs(height - lastAppliedQrHeight) < QR_HEIGHT_DEADBAND) return;
     lastAppliedQrHeight = height;
@@ -661,7 +791,19 @@
     qrCard.style.height = height + "px";
     qrFull.style.opacity = String(fullOpacity);
     qrCollapsed.style.opacity = String(collapsedOpacity);
+    qrCollapsedBackdrop.style.opacity = String(collapsedOpacity);
     qrCollapsed.style.pointerEvents = collapsedOpacity > 0.5 ? "auto" : "none";
+  }
+
+  // Drives qrVirtualScroll from a raw wheel/touch delta. Only meaningful
+  // while there's no real overflow (otherwise native scrolling plus the
+  // "scroll" listener below already do this from the authoritative
+  // scrollTop) — callers check hasRealOverflow themselves so they can also
+  // decide whether to preventDefault (block page-behind scroll chaining)
+  // only when this synthetic path is actually the one driving the card.
+  function nudgeQrVirtualScroll(deltaY) {
+    qrVirtualScroll = Math.max(0, Math.min(QR_COLLAPSE_RANGE, qrVirtualScroll + deltaY));
+    updateQrCollapse();
   }
 
   // Once the visitor has actually sent a message (typed, tapped a
@@ -681,14 +823,29 @@
   // state would collapse it without ever calling this function at all.
   var QR_COLLAPSE_TRANSITION = "height .32s cubic-bezier(0.16, 1, 0.3, 1), opacity .32s ease";
   function collapseQuickReplies() {
-    qrCard.style.transition = QR_COLLAPSE_TRANSITION;
-    qrFull.style.transition = "opacity .32s ease";
-    qrCollapsed.style.transition = "opacity .32s ease";
+    var mobile = isMobileLayout();
+    // Mobile swaps the demo pill for the generic "acciones rápidas" one
+    // (opens the sheet instead of sending DEMO_REPLY — see qrCollapsed's
+    // click handler) and skips the transition entirely, per design: no
+    // scroll-tied animation on mobile, just an instant switch once the
+    // visitor sends their first message.
+    qrCollapsedLabel.textContent = mobile ? QR_MOBILE_LABEL : DEMO_LABEL;
+    qrCollapsedIcon.innerHTML =
+      '<svg viewBox="0 0 24 24">' + (mobile ? QR_ICONS.chat : (QR_ICONS[DEMO_ICON] || QR_ICONS.calendar)) + "</svg>";
+    var heightTransition = mobile ? "none" : QR_COLLAPSE_TRANSITION;
+    var opacityTransition = mobile ? "none" : "opacity .32s ease";
+    qrCard.style.transition = heightTransition;
+    qrFull.style.transition = opacityTransition;
+    qrCollapsed.style.transition = opacityTransition;
+    qrCollapsedBackdrop.style.transition = opacityTransition;
     qrCard.style.height = QR_COLLAPSED_HEIGHT + "px";
     qrFull.style.opacity = "0";
     qrCollapsed.style.opacity = "1";
+    qrCollapsedBackdrop.style.opacity = "1";
     qrCollapsed.style.pointerEvents = "auto";
     lastAppliedQrHeight = QR_COLLAPSED_HEIGHT;
+    qrVirtualScroll = QR_COLLAPSE_RANGE;
+    if (mobile) return;
     // Scroll-driven updateQrCollapse calls (still live afterwards — the
     // visitor can keep scrolling the transcript) apply their own height/
     // opacity per frame with no transition, by design (see updateQrCollapse
@@ -710,6 +867,7 @@
     qrNaturalHeight = qrFull.offsetHeight;
     positionQrCollapsedPill();
     lastAppliedQrHeight = null;
+    qrVirtualScroll = 0;
     updateQrCollapse();
   }
 
@@ -717,8 +875,97 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
-  messagesEl.addEventListener("scroll", updateQrCollapse, { passive: true });
+  // Scroll/wheel/touch-tied collapsing is desktop-only, per design — on
+  // mobile the FAQ card stays fully expanded regardless of scrolling and
+  // only collapses on the visitor's first message (see collapseQuickReplies,
+  // called from pushMessage). isMobileLayout is defined further below but
+  // hoisted, and these callbacks only ever run later, on an actual event.
+  messagesEl.addEventListener(
+    "scroll",
+    function () {
+      if (isMobileLayout()) return;
+      updateQrCollapse();
+    },
+    { passive: true }
+  );
+  // Wheel (desktop trackpad/mouse) drives qrVirtualScroll directly whenever
+  // messagesEl has nothing real to scroll, so the collapse still tracks the
+  // gesture 1:1 (see qrVirtualScroll above) instead of sitting inert.
+  // preventDefault only fires on that same no-overflow path, so it never
+  // fights normal scrolling once a conversation is long enough to actually
+  // need it — and it stops the gesture from chaining through to the host
+  // page behind the widget, which is what silently ate the drag before.
+  messagesEl.addEventListener(
+    "wheel",
+    function (e) {
+      if (isMobileLayout() || hasRealMessagesOverflow()) return;
+      e.preventDefault();
+      nudgeQrVirtualScroll(e.deltaY);
+    },
+    { passive: false }
+  );
+  var qrTouchStartY = null;
+  var qrTouchStartVirtual = 0;
+  messagesEl.addEventListener(
+    "touchstart",
+    function (e) {
+      qrTouchStartY = e.touches[0].clientY;
+      qrTouchStartVirtual = qrVirtualScroll;
+    },
+    { passive: true }
+  );
+  messagesEl.addEventListener(
+    "touchmove",
+    function (e) {
+      if (isMobileLayout() || hasRealMessagesOverflow()) return;
+      if (qrTouchStartY === null) return;
+      e.preventDefault();
+      var deltaY = qrTouchStartY - e.touches[0].clientY;
+      qrVirtualScroll = Math.max(0, Math.min(QR_COLLAPSE_RANGE, qrTouchStartVirtual + deltaY));
+      updateQrCollapse();
+    },
+    { passive: false }
+  );
+  messagesEl.addEventListener(
+    "touchend",
+    function () {
+      qrTouchStartY = null;
+    },
+    { passive: true }
+  );
+  // qrCard (the still-expanded-or-collapsing FAQ card) and qrCollapsed (the
+  // floating pill) are separate flex/positioned regions above messagesEl,
+  // not overlapping it — so a wheel gesture starting there (very likely
+  // with a short conversation, where these still take up most of the
+  // visible height) never reaches messagesEl's own wheel listener above and
+  // silently does nothing, making the card look stuck instead of
+  // re-expanding on scroll-up. Forwarding the same delta into messagesEl's
+  // real scrollTop (there's no native scrolling to fall back on here, since
+  // neither element is itself scrollable) or qrVirtualScroll — same choice
+  // messagesEl's own listener makes — fixes that regardless of exactly
+  // where over the panel the visitor's cursor happens to be. Wheel only:
+  // touch is already fully disabled here on real mobile (isMobileLayout),
+  // and a desktop device with a touchscreen is a negligible edge case.
+  [qrCard, qrCollapsed].forEach(function (el) {
+    el.addEventListener(
+      "wheel",
+      function (e) {
+        if (isMobileLayout()) return;
+        e.preventDefault();
+        if (hasRealMessagesOverflow()) {
+          messagesEl.scrollTop += e.deltaY;
+        } else {
+          nudgeQrVirtualScroll(e.deltaY);
+        }
+      },
+      { passive: false }
+    );
+  });
   qrCollapsed.addEventListener("click", function () {
+    if (isMobileLayout()) {
+      openQrSheet();
+      return;
+    }
     pushMessage("user", DEMO_REPLY);
     sendToServer(DEMO_REPLY);
   });
@@ -835,7 +1082,9 @@
   // pushed to the message list as a bot bubble — used by maybeGreet's
   // data-first-reply-in-header path to route the first reply into the
   // header instead.
-  function sendToServer(text, attachmentUrl, onReply) {
+  // `silent`, when true, marks this as maybeGreet's automatic "hola" rather
+  // than something the visitor actually did — see suppressFocusCollapse.
+  function sendToServer(text, attachmentUrl, onReply, silent) {
     setSending(true);
     var typingEl = document.createElement("div");
     typingEl.className = "umeia-typing";
@@ -881,6 +1130,12 @@
       })
       .finally(function () {
         setSending(false);
+        // Desktop always refocuses the input after a send, silent or not —
+        // unchanged from before. On mobile, refocusing after the automatic
+        // "hola" greet would otherwise trip the focus-driven collapse below
+        // before the visitor has done anything at all (see
+        // suppressFocusCollapse), so that one case is flagged first.
+        if (silent) suppressFocusCollapse = true;
         inputEl.focus();
       });
   }
@@ -975,12 +1230,24 @@
   // input focused" from the shadow root felt like more moving parts than
   // just remembering it.
   var inputHasFocus = false;
+  // Set right before sendToServer's .finally() refocuses the input after
+  // maybeGreet's automatic "hola" — that refocus isn't the visitor opening
+  // the keyboard, so it shouldn't collapse the still-untouched FAQ list out
+  // from under them on mobile. Consumed (reset) by the very next focus
+  // event, which follows synchronously within the same inputEl.focus() call.
+  var suppressFocusCollapse = false;
   inputEl.addEventListener("focus", function () {
     inputHasFocus = true;
-    if (isMobileLayout()) collapseQuickReplies();
+    if (isMobileLayout() && !suppressFocusCollapse) collapseQuickReplies();
+    suppressFocusCollapse = false;
   });
   inputEl.addEventListener("blur", function () {
     inputHasFocus = false;
+    // Don't wait for the visualViewport resize event the keyboard closing
+    // will eventually fire (there's often a noticeable lag) — blurring the
+    // only thing that could have opened the keyboard means it's on its way
+    // down regardless, so restore the header/pill right away.
+    setKeyboardOpen(false);
   });
 
   emojiBtn.addEventListener("click", function (e) {
@@ -1057,13 +1324,16 @@
     updateAttachChip();
   });
 
-  panel.querySelectorAll(".umeia-qr-item").forEach(function (btn) {
+  // root (not panel) so this also covers the mobile sheet's own copies of
+  // these buttons (qrSheet is a sibling of panel, not nested inside it).
+  root.querySelectorAll(".umeia-qr-item").forEach(function (btn) {
     btn.addEventListener("click", function () {
       var idx = Number(btn.getAttribute("data-qr-index"));
       var qr = QUICK_REPLIES[idx];
       if (!qr) return;
       pushMessage("user", qr.label);
       sendToServer(qr.label);
+      closeQrSheet();
     });
   });
 
@@ -1081,10 +1351,26 @@
   // runs on mobile — see the keyboard-shrink check below.
   var initialViewportHeight = null;
 
+  // Drives .umeia-kb-open (see the mobile CSS block above): hides the
+  // greeting line and the floating quick-replies pill so the cramped space
+  // left above the on-screen keyboard goes to the actual conversation
+  // instead. positionQrCollapsedPill runs on every toggle since hiding/
+  // showing the greeting changes header.offsetHeight, which is what the
+  // pill's own position is computed from — otherwise it'd reappear
+  // misplaced the moment the keyboard closes.
+  var keyboardOpen = false;
+  function setKeyboardOpen(open) {
+    if (keyboardOpen === open) return;
+    keyboardOpen = open;
+    panel.classList.toggle("umeia-kb-open", open);
+    positionQrCollapsedPill();
+  }
+
   function syncMobileViewportHeight() {
     if (!isMobileLayout()) {
       panel.style.height = "";
       panel.style.top = "";
+      setKeyboardOpen(false);
       return;
     }
     var vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -1105,6 +1391,9 @@
       // guards against — this is a fallback in case that somehow didn't run
       // first).
       collapseQuickReplies();
+      setKeyboardOpen(true);
+    } else {
+      setKeyboardOpen(false);
     }
     panel.style.height = vh + "px";
     // `position: fixed` tracks the *layout* viewport, not the *visual* one —
@@ -1144,10 +1433,10 @@
         try {
           localStorage.setItem(GREETED_KEY, "1");
         } catch (e) { /* localStorage full or unavailable — degrade silently */ }
-      });
+      }, true);
       return;
     }
-    if (transcript.length === 0) sendToServer("hola");
+    if (transcript.length === 0) sendToServer("hola", null, null, true);
   }
 
   var opened = false;
@@ -1196,6 +1485,7 @@
     opened = false;
     panel.style.height = "";
     document.body.style.overflow = "";
+    closeQrSheet();
   }
 
   bubble.addEventListener("click", function () {
