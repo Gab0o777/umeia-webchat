@@ -919,7 +919,20 @@
   // and focusing then auto-scrolls the (now scrollable) panel, dragging the
   // header half out of frame. Tapping the input to type your own message is
   // just as much "engaging" as sending one, so retire the card right away.
-  inputEl.addEventListener("focus", hideQuickReplies);
+  //
+  // Also tracked in this plain flag (rather than reading focus back off the
+  // DOM later) for syncMobileViewportHeight's fallback check below — `root`
+  // there is a plain <div>, not the shadow root, so it has no .activeElement
+  // to query, and re-deriving "is the input focused" from the shadow root
+  // felt like more moving parts than just remembering it.
+  var inputHasFocus = false;
+  inputEl.addEventListener("focus", function () {
+    inputHasFocus = true;
+    hideQuickReplies();
+  });
+  inputEl.addEventListener("blur", function () {
+    inputHasFocus = false;
+  });
 
   emojiBtn.addEventListener("click", function (e) {
     e.stopPropagation();
@@ -1027,15 +1040,20 @@
     var vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     if (initialViewportHeight === null) {
       initialViewportHeight = vh;
-    } else if (vh < initialViewportHeight - 100) {
-      // The visible area shrank meaningfully after we already saw its full
-      // size once — almost always the on-screen keyboard opening. The
+    } else if (vh < initialViewportHeight - 100 && inputHasFocus) {
+      // The visible area shrank meaningfully AND the message input is what's
+      // currently focused — as opposed to just the mobile browser's address
+      // bar collapsing on scroll or settling after load, which alone can
+      // shift visualViewport.height by a similar amount with no keyboard
+      // involved at all (and did — hiding the quick-replies on every fresh
+      // open before the visitor had done anything). Requiring focus on the
+      // input ties this specifically to the keyboard-opening case: the
       // quick-replies card (still expanded pre-first-message) plus
       // header/inputrow/footer can then no longer fit this smaller height,
       // and the focused input's native "scroll into view" drags the header
       // half off-screen (same overflow inputEl's "focus" listener already
       // guards against — this is a fallback in case that somehow didn't run
-      // first, e.g. focus via something other than a direct tap).
+      // first).
       hideQuickReplies();
     }
     panel.style.height = vh + "px";
