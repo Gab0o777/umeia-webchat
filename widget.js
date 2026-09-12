@@ -30,6 +30,12 @@
  *   data-demo-icon    icon key for that pill (default: "calendar")
  *   data-demo-reply   message sent when that pill is clicked
  *                     (default: same text as data-demo-label)
+ *   data-first-reply-in-header  "true" to show the bot's actual first reply
+ *                     (the "hola" auto-greet response) inline in the header,
+ *                     replacing data-greeting/data-description, instead of as
+ *                     a separate message bubble above the quick-reply buttons
+ *                     — avoids showing the same welcome text twice. Default:
+ *                     unset (existing static-greeting + bubble behavior).
  *
  * Talks to umeiacore's webchat channel: POST {api-base}/webhook/webchat/message
  * (see core/webhook/webchat.py). No build step, no dependencies.
@@ -58,6 +64,7 @@
   var DEMO_LABEL = scriptTag.getAttribute("data-demo-label") || "Agendar demo";
   var DEMO_REPLY = scriptTag.getAttribute("data-demo-reply") || DEMO_LABEL;
   var DEMO_ICON = scriptTag.getAttribute("data-demo-icon") || "calendar";
+  var FIRST_REPLY_IN_HEADER = scriptTag.getAttribute("data-first-reply-in-header") === "true";
 
   // Umeia "U" mark (from umeia-projects/umeia-client-insights public/umeia-icon.png),
   // inlined so the widget stays a single dependency-free file.
@@ -128,6 +135,10 @@
   var STORAGE_PREFIX = "umeia_widget_" + TENANT_ID + "_";
   var CONVERSATION_KEY = STORAGE_PREFIX + "conversation_id";
   var TRANSCRIPT_KEY = STORAGE_PREFIX + "transcript";
+  // Only used when data-first-reply-in-header is on — its presence doubles
+  // as "we've already greeted" for that mode, since that first reply is
+  // deliberately kept out of `transcript` (see maybeGreet).
+  var HEADER_TEXT_KEY = STORAGE_PREFIX + "header_text";
 
   function getConversationId() {
     var id = localStorage.getItem(CONVERSATION_KEY);
@@ -198,6 +209,20 @@
     "  display: none; flex-direction: column; overflow: hidden;",
     "  transform-origin: bottom " + POSITION + ";",
     "}",
+    // data-first-reply-in-header can make the header much taller than the
+    // short default greeting the fixed 640px was sized around — without
+    // this, the rest of the flex column (quickreplies/messages/inputrow/
+    // footer, all flex-shrink:0 or already at their min-content floor)
+    // simply doesn't fit, the panel's own content overflows its fixed
+    // height, and focusing the input then auto-scrolls the panel itself
+    // (browsers scroll a focused element's nearest scrollable ancestor
+    // into view) — dragging the header half out of frame. height:auto
+    // (still bounded by max-height) lets the panel grow to actually fit
+    // instead. Scoped to this one modifier class (added by
+    // setHeaderGreetingText) so every other tenant's fixed 640px is
+    // untouched. See also .umeia-greeting-first-reply's own max-height
+    // below, a safety net for pathologically long welcome_text.
+    ".umeia-panel.umeia-tall-header { height: auto; max-height: calc(100vh - 40px); }",
     // Keyframes (not a transition) so the reveal plays even though display
     // just flipped from none to flex in the same frame — transitions can't
     // animate out of display:none, animations can.
@@ -291,6 +316,20 @@
     ".umeia-greeting { position: relative; z-index: 1; margin-top: 14px; }",
     ".umeia-greeting-title { font-size: 18px; font-weight: 700; }",
     ".umeia-greeting-sub { font-size: 13px; color: rgba(255,255,255,.8); margin-top: 3px; }",
+    // Swapped in over .umeia-greeting-title/.umeia-greeting-sub (see
+    // setHeaderGreetingText) when data-first-reply-in-header is on — the
+    // bot's real (often multi-paragraph) first reply instead of the short
+    // static greeting, so it needs wrapping/line-break handling like a
+    // message bubble (.umeia-msg) rather than a bold one-liner.
+    ".umeia-greeting-first-reply {",
+    "  font-size: 13.5px; font-weight: 400; line-height: 1.5; color: rgba(255,255,255,.92);",
+    "  white-space: pre-wrap; word-wrap: break-word;",
+    // Safety net, not the normal case (.umeia-panel.umeia-tall-header above
+    // is what actually makes room for this) — only kicks in if a tenant's
+    // welcome_text is long enough that even a taller panel can't fit it
+    // alongside the quickreplies/inputrow/footer within the viewport.
+    "  max-height: 40vh; overflow-y: auto;",
+    "}",
 
     ".umeia-messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; background: #f7f6fb; }",
 
@@ -557,6 +596,7 @@
   var sendBtn = panel.querySelector(".umeia-send");
   var closeBtn = panel.querySelector(".umeia-close");
   var header = panel.querySelector(".umeia-header");
+  var greetingEl = panel.querySelector(".umeia-greeting");
   var qrCard = panel.querySelector(".umeia-quickreplies");
   var qrFull = panel.querySelector(".umeia-qr-full");
   var qrCollapsed = panel.querySelector(".umeia-qr-collapsed");
@@ -572,6 +612,17 @@
   var transcript = loadTranscript();
   var conversationId = getConversationId();
   var sending = false;
+
+  // Returning visitor in data-first-reply-in-header mode: show their
+  // already-fetched first reply immediately instead of the static greeting,
+  // without waiting on maybeGreet (which won't even re-fetch it — see there).
+  if (FIRST_REPLY_IN_HEADER) {
+    var cachedHeaderText = null;
+    try {
+      cachedHeaderText = localStorage.getItem(HEADER_TEXT_KEY);
+    } catch (e) { /* localStorage unavailable — degrade silently */ }
+    if (cachedHeaderText) setHeaderGreetingText(cachedHeaderText);
+  }
 
   // Collapses the FAQ card into a slim pill as the visitor scrolls the
   // conversation, so the suggestions don't keep eating vertical space once
@@ -735,7 +786,11 @@
     inputEl.disabled = value;
   }
 
-  function sendToServer(text, attachmentUrl) {
+  // `onReply`, when passed, receives the raw reply text instead of it being
+  // pushed to the message list as a bot bubble — used by maybeGreet's
+  // data-first-reply-in-header path to route the first reply into the
+  // header instead.
+  function sendToServer(text, attachmentUrl, onReply) {
     setSending(true);
     var typingEl = document.createElement("div");
     typingEl.className = "umeia-typing";
@@ -767,7 +822,11 @@
           localStorage.setItem(CONVERSATION_KEY, conversationId);
         }
         if (data.reply) {
-          pushMessage("bot", data.reply);
+          if (onReply) {
+            onReply(data.reply);
+          } else {
+            pushMessage("bot", data.reply);
+          }
         }
       })
       .catch(function (err) {
@@ -955,12 +1014,48 @@
   }
   window.addEventListener("resize", syncMobileViewportHeight);
 
+  // Replaces the static data-greeting/data-description with the bot's real
+  // first reply — reflows the header to fit it (which can be a full
+  // paragraph, unlike the short default greeting) and repositions the
+  // quick-replies card/pill, both of which measure the header's actual
+  // rendered height rather than assuming a fixed size.
+  function setHeaderGreetingText(text) {
+    greetingEl.innerHTML = "";
+    var el = document.createElement("div");
+    el.className = "umeia-greeting-first-reply";
+    el.textContent = text;
+    greetingEl.appendChild(el);
+    panel.classList.add("umeia-tall-header");
+    if (opened) {
+      qrNaturalHeight = qrFull.offsetHeight;
+      positionQrCollapsedPill();
+      lastAppliedQrHeight = null;
+      updateQrCollapse();
+    }
+  }
+
   // Silently sends "hola" (no visible user bubble — sendToServer only
   // renders the reply) so the tenant's own configured greeting shows up as
   // a real first message, instead of only the static header text. Safe to
   // call any time transcript is empty (first-ever open, or right after a
   // reset) — a non-empty transcript means this already happened.
+  //
+  // data-first-reply-in-header mode instead routes that reply into the
+  // header (see setHeaderGreetingText) and deliberately keeps it out of
+  // `transcript` — it's not a message bubble in this mode, so replaying it
+  // from the cached transcript on a later open would be wrong. HEADER_TEXT_KEY
+  // is what remembers "already greeted" here instead.
   function maybeGreet() {
+    if (FIRST_REPLY_IN_HEADER) {
+      if (localStorage.getItem(HEADER_TEXT_KEY)) return;
+      sendToServer("hola", null, function (reply) {
+        try {
+          localStorage.setItem(HEADER_TEXT_KEY, reply);
+        } catch (e) { /* localStorage full or unavailable — degrade silently */ }
+        setHeaderGreetingText(reply);
+      });
+      return;
+    }
     if (transcript.length === 0) sendToServer("hola");
   }
 

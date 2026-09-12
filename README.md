@@ -38,6 +38,24 @@ Optional attributes on the same tag:
 | `data-demo-label` | `Agendar demo` | label for the pill the quick-replies card collapses into on scroll |
 | `data-demo-icon` | `calendar` | icon key (see `data-quick-replies` below) for that pill |
 | `data-demo-reply` | same as `data-demo-label` | message sent when that pill is clicked |
+| `data-first-reply-in-header` | unset | `"true"` shows the bot's real first reply inline in the header (replacing `data-greeting`/`data-description`) instead of also as a separate message bubble — see below |
+
+### `data-first-reply-in-header`
+
+By default, the header always shows the static `data-greeting`/`data-description`
+text, and the bot's actual "hola" auto-greet reply shows up separately as the
+first message bubble above the quick-reply buttons — which, combined with
+`data-quick-replies` mirroring a tenant's own menu, can read as saying the
+same thing (welcome text + "¿en qué situación estás?") twice in a row.
+
+Setting `data-first-reply-in-header="true"` shows that real reply inline in
+the header instead (the header grows to fit it — it's measured, not assumed
+to be one line) and leaves it out of the message list entirely, so the panel
+reads as: header greeting *is* the bot's actual first message, quick-reply
+buttons immediately below it, empty message list until the visitor picks one.
+That first reply is cached separately from the transcript (`localStorage`,
+namespaced per tenant) so a returning visitor sees it immediately without
+waiting on a request, and it's never re-fetched.
 
 ### `data-quick-replies`
 
@@ -69,6 +87,7 @@ own WhatsApp menu root options one-for-one:
   data-demo-label="Conocer propuesta"
   data-demo-reply="Quiero conocer la propuesta"
   data-demo-icon="info"
+  data-first-reply-in-header="true"
   async
 ></script>
 ```
