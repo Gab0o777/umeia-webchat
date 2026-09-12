@@ -645,6 +645,36 @@
     qrCollapsed.style.pointerEvents = collapsedOpacity > 0.5 ? "auto" : "none";
   }
 
+  // The scroll-driven collapse above is only a cosmetic transition — once
+  // the visitor has actually sent a message (typed, tapped a quick-reply, or
+  // tapped the demo pill), the conversation has moved past whatever node
+  // those buttons/pill were built for. Leaving them reachable afterwards
+  // (as the scroll-based collapse alone would, since qrCard.height only
+  // depends on scrollTop, not on whether the visitor engaged) is actively
+  // misleading — tapping "Quiero inscribirme" again three replies later just
+  // confuses whatever node the conversation is actually on now — and, since
+  // the full card doesn't collapse until the visitor scrolls (which may
+  // never happen if the reply fits without scrolling, common on the taller
+  // fullscreen mobile sheet), it can otherwise sit there permanently eating
+  // most of a phone screen. So this is a one-way "retire the quick-replies
+  // UI for this conversation" rather than part of the scroll animation.
+  function hideQuickReplies() {
+    qrCard.style.display = "none";
+    qrCollapsed.style.display = "none";
+  }
+
+  // Reverses hideQuickReplies for the one path that legitimately starts a
+  // new conversation (kebab menu → reset) — the FAQ suggestions are relevant
+  // again once back at the root node.
+  function showQuickReplies() {
+    qrCard.style.display = "";
+    qrCollapsed.style.display = "";
+    qrNaturalHeight = qrFull.offsetHeight;
+    positionQrCollapsedPill();
+    lastAppliedQrHeight = null;
+    updateQrCollapse();
+  }
+
   messagesEl.addEventListener("scroll", updateQrCollapse, { passive: true });
   qrCollapsed.addEventListener("click", function () {
     pushMessage("user", DEMO_REPLY);
@@ -748,6 +778,9 @@
     saveTranscript(transcript);
     renderMessage(role, text, ts);
     if (role === "bot") playNotificationSound();
+    // Every send path (typed input, quick-reply click, demo pill click)
+    // pushes a "user" message before calling sendToServer — see hideQuickReplies.
+    if (role === "user") hideQuickReplies();
   }
 
   function setSending(value) {
@@ -916,12 +949,13 @@
     try {
       localStorage.removeItem(CONVERSATION_KEY);
       localStorage.removeItem(TRANSCRIPT_KEY);
+      localStorage.removeItem(GREETED_KEY);
     } catch (e) { /* localStorage unavailable — in-memory reset still helps */ }
     conversationId = getConversationId();
     transcript = [];
     messagesEl.scrollTop = 0;
     renderAll();
-    updateQrCollapse();
+    showQuickReplies();
     maybeGreet();
   });
 
@@ -1014,12 +1048,21 @@
     root.classList.add("umeia-panel-open");
     opened = true;
     maybeGreet();
-    // offsetHeight only resolves once the panel is actually laid out
-    // (display:none ancestors report 0), so measure on open, not at init.
-    qrNaturalHeight = qrFull.offsetHeight;
-    positionQrCollapsedPill();
-    lastAppliedQrHeight = null;
-    updateQrCollapse();
+    // A returning visitor who already has a conversation going (or, in
+    // data-hide-first-reply mode, already got the silent "hola") shouldn't
+    // see the quick-replies UI at all on reopen — it's just as stale then
+    // as it is mid-conversation (see hideQuickReplies), just encountered a
+    // turn earlier.
+    if (transcript.length > 0 || (HIDE_FIRST_REPLY && localStorage.getItem(GREETED_KEY))) {
+      hideQuickReplies();
+    } else {
+      // offsetHeight only resolves once the panel is actually laid out
+      // (display:none ancestors report 0), so measure on open, not at init.
+      qrNaturalHeight = qrFull.offsetHeight;
+      positionQrCollapsedPill();
+      lastAppliedQrHeight = null;
+      updateQrCollapse();
+    }
     syncMobileViewportHeight();
     if (isMobileLayout()) {
       // Stop the page behind the fullscreen sheet from scrolling once the
