@@ -38,24 +38,27 @@ Optional attributes on the same tag:
 | `data-demo-label` | `Agendar demo` | label for the pill the quick-replies card collapses into on scroll |
 | `data-demo-icon` | `calendar` | icon key (see `data-quick-replies` below) for that pill |
 | `data-demo-reply` | same as `data-demo-label` | message sent when that pill is clicked |
-| `data-first-reply-in-header` | unset | `"true"` shows the bot's real first reply inline in the header (replacing `data-greeting`/`data-description`) instead of also as a separate message bubble — see below |
+| `data-hide-first-reply` | unset | `"true"` silently sends the "hola" auto-greet without showing its reply anywhere — see below |
 
-### `data-first-reply-in-header`
+### `data-hide-first-reply`
 
-By default, the header always shows the static `data-greeting`/`data-description`
-text, and the bot's actual "hola" auto-greet reply shows up separately as the
-first message bubble above the quick-reply buttons — which, combined with
+By default, the bot's actual "hola" auto-greet reply shows up as the first
+message bubble above the quick-reply buttons — which, combined with
 `data-quick-replies` mirroring a tenant's own menu, can read as saying the
-same thing (welcome text + "¿en qué situación estás?") twice in a row.
+same thing (the tenant's full welcome text + "¿en qué situación estás?") right
+above a set of buttons that already say the same options. It's cluttered.
 
-Setting `data-first-reply-in-header="true"` shows that real reply inline in
-the header instead (the header grows to fit it — it's measured, not assumed
-to be one line) and leaves it out of the message list entirely, so the panel
-reads as: header greeting *is* the bot's actual first message, quick-reply
-buttons immediately below it, empty message list until the visitor picks one.
-That first reply is cached separately from the transcript (`localStorage`,
-namespaced per tenant) so a returning visitor sees it immediately without
-waiting on a request, and it's never re-fetched.
+Setting `data-hide-first-reply="true"` still sends that "hola" (the tenant's
+menu still needs it to set its server-side state to "root"), but discards the
+reply instead of rendering it — no message bubble, and the header stays on
+whatever `data-greeting`/`data-description` are set to. Pair it with a short,
+static `data-greeting` (see `adultos2000.html`'s embed of `gremio`: just
+*"¡Hola! Soy el asistente virtual de Fundación El Futbolista."*, no
+`data-description`) so the panel reads as one clean screen: short greeting,
+quick-reply buttons, empty message list until the visitor picks one — instead
+of the full welcome text twice. That "already greeted" state is tracked
+separately from the transcript (`localStorage`, namespaced per tenant) so a
+reload doesn't re-send "hola".
 
 ### `data-quick-replies`
 
@@ -87,7 +90,7 @@ own WhatsApp menu root options one-for-one:
   data-demo-label="Conocer propuesta"
   data-demo-reply="Quiero conocer la propuesta"
   data-demo-icon="info"
-  data-first-reply-in-header="true"
+  data-hide-first-reply="true"
   async
 ></script>
 ```
