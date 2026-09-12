@@ -645,26 +645,41 @@
     qrCollapsed.style.pointerEvents = collapsedOpacity > 0.5 ? "auto" : "none";
   }
 
-  // The scroll-driven collapse above is only a cosmetic transition — once
-  // the visitor has actually sent a message (typed, tapped a quick-reply, or
-  // tapped the demo pill), the conversation has moved past whatever node
-  // those buttons/pill were built for. Leaving them reachable afterwards
-  // (as the scroll-based collapse alone would, since qrCard.height only
-  // depends on scrollTop, not on whether the visitor engaged) is actively
-  // misleading — tapping "Quiero inscribirme" again three replies later just
-  // confuses whatever node the conversation is actually on now — and, since
-  // the full card doesn't collapse until the visitor scrolls (which may
-  // never happen if the reply fits without scrolling, common on the taller
-  // fullscreen mobile sheet), it can otherwise sit there permanently eating
-  // most of a phone screen. So this is a one-way "retire the quick-replies
-  // UI for this conversation" rather than part of the scroll animation.
-  function hideQuickReplies() {
-    qrCard.style.display = "none";
-    qrCollapsed.style.display = "none";
+  // Once the visitor has actually sent a message (typed, tapped a
+  // quick-reply, or tapped the demo pill), the full FAQ list's buttons stop
+  // matching whatever node the conversation is actually on — but the
+  // collapsed pill is meant to persist as an always-available shortcut
+  // (e.g. "Conocer propuesta"), the same way it would if the visitor had
+  // scrolled it there themselves. Rather than wait for an actual scroll
+  // (which may never happen — the reply can easily fit without scrolling,
+  // especially on the taller fullscreen mobile sheet, leaving the full
+  // ~230px list permanently in the way), this jumps straight to that same
+  // collapsed end-state on engagement, with its own transition since there's
+  // no scroll gesture here to scrub it into place frame-by-frame.
+  var QR_COLLAPSE_TRANSITION = "height .32s cubic-bezier(0.16, 1, 0.3, 1), opacity .32s ease";
+  function collapseQuickReplies() {
+    qrCard.style.transition = QR_COLLAPSE_TRANSITION;
+    qrFull.style.transition = "opacity .32s ease";
+    qrCollapsed.style.transition = "opacity .32s ease";
+    qrCard.style.height = QR_COLLAPSED_HEIGHT + "px";
+    qrFull.style.opacity = "0";
+    qrCollapsed.style.opacity = "1";
+    qrCollapsed.style.pointerEvents = "auto";
+    lastAppliedQrHeight = QR_COLLAPSED_HEIGHT;
+    // Scroll-driven updateQrCollapse calls (still live afterwards — the
+    // visitor can keep scrolling the transcript) apply their own height/
+    // opacity per frame with no transition, by design (see updateQrCollapse
+    // above) — clear these once the one-off animation finishes so they go
+    // back to scrubbing 1:1 with the drag instead of easing every frame.
+    setTimeout(function () {
+      qrCard.style.transition = "";
+      qrFull.style.transition = "";
+      qrCollapsed.style.transition = "";
+    }, 340);
   }
 
-  // Reverses hideQuickReplies for the one path that legitimately starts a
-  // new conversation (kebab menu → reset) — the FAQ suggestions are relevant
+  // Reverses collapseQuickReplies for the one path that legitimately starts
+  // a new conversation (kebab menu → reset) — the full FAQ list is relevant
   // again once back at the root node.
   function showQuickReplies() {
     qrCard.style.display = "";
@@ -779,8 +794,8 @@
     renderMessage(role, text, ts);
     if (role === "bot") playNotificationSound();
     // Every send path (typed input, quick-reply click, demo pill click)
-    // pushes a "user" message before calling sendToServer — see hideQuickReplies.
-    if (role === "user") hideQuickReplies();
+    // pushes a "user" message before calling sendToServer — see collapseQuickReplies.
+    if (role === "user") collapseQuickReplies();
   }
 
   function setSending(value) {
@@ -940,7 +955,7 @@
   var inputHasFocus = false;
   inputEl.addEventListener("focus", function () {
     inputHasFocus = true;
-    hideQuickReplies();
+    collapseQuickReplies();
   });
   inputEl.addEventListener("blur", function () {
     inputHasFocus = false;
@@ -1066,7 +1081,7 @@
       // half off-screen (same overflow inputEl's "focus" listener already
       // guards against — this is a fallback in case that somehow didn't run
       // first).
-      hideQuickReplies();
+      collapseQuickReplies();
     }
     panel.style.height = vh + "px";
   }
@@ -1107,18 +1122,20 @@
     opened = true;
     maybeGreet();
     // A returning visitor who already has a conversation going shouldn't see
-    // the quick-replies UI at all on reopen — it's just as stale then as it
-    // is mid-conversation (see hideQuickReplies), just encountered a turn
-    // earlier. `transcript` correctly reflects that in data-hide-first-reply
-    // mode too: the silent "hola" there deliberately never gets pushed to
-    // it (see maybeGreet), so it only gains entries once the visitor
-    // actually engages — GREETED_KEY is not a proxy for that, it only
-    // marks "we already sent the silent hola" (to avoid resending it), which
-    // happens on the very first open regardless of whether the visitor ever
-    // clicks anything; using it here hid the buttons for good after that
-    // first open even for someone who closed the panel without engaging.
+    // the full FAQ list on reopen — it's just as stale then as it is
+    // mid-conversation (see collapseQuickReplies), just encountered a turn
+    // earlier — so jump straight to the collapsed pill state. `transcript`
+    // correctly reflects that in data-hide-first-reply mode too: the silent
+    // "hola" there deliberately never gets pushed to it (see maybeGreet), so
+    // it only gains entries once the visitor actually engages — GREETED_KEY
+    // is not a proxy for that, it only marks "we already sent the silent
+    // hola" (to avoid resending it), which happens on the very first open
+    // regardless of whether the visitor ever clicks anything; using it here
+    // hid the buttons for good after that first open even for someone who
+    // closed the panel without engaging.
     if (transcript.length > 0) {
-      hideQuickReplies();
+      positionQrCollapsedPill();
+      collapseQuickReplies();
     } else {
       // offsetHeight only resolves once the panel is actually laid out
       // (display:none ancestors report 0), so measure on open, not at init.
