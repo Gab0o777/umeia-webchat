@@ -820,6 +820,17 @@
       })
       .then(function (data) {
         typingEl.remove();
+        // Removing the typing bubble can shrink messagesEl back down below
+        // its scrollTop (set below to reveal the typing bubble, which
+        // nudges the same "scroll" listener that drives the quick-replies
+        // collapse — see updateQrCollapse). The browser clamps scrollTop
+        // back down as a read, but nothing re-fires a "scroll" event just
+        // from removing content, so without this the card was left stuck
+        // faded/collapsed from a transient scroll that was never really the
+        // visitor scrolling — most visible right after a reset, where the
+        // silent hola's own typing bubble was enough to fade the card back
+        // out a second after showQuickReplies had just restored it.
+        updateQrCollapse();
         if (data.conversation_id) {
           conversationId = data.conversation_id;
           localStorage.setItem(CONVERSATION_KEY, conversationId);
@@ -834,6 +845,7 @@
       })
       .catch(function (err) {
         typingEl.remove();
+        updateQrCollapse();
         console.error("[umeia-widget] request failed:", err);
         renderMessage("error", "No pudimos enviar tu mensaje. Probá de nuevo en un momento.");
       })
