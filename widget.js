@@ -5,13 +5,31 @@
  *   <script src="https://webchat.umeia.io/widget.js" data-tenant="TENANT_SLUG" async></script>
  *
  * Optional data-attributes on the same <script> tag:
- *   data-api-base    umeiacore base URL (default: https://umeia.space)
- *   data-color       accent color, any valid CSS color (default: #6c3ce0)
- *   data-position    "bottom-right" | "bottom-left" (default: bottom-right)
- *   data-title       header name (default: "Umeia Team")
- *   data-subtitle    small line under the header name (default: "En línea")
- *   data-greeting    bold greeting line in the header (default: "¡Hola! 👋")
- *   data-description line under the greeting (default: "¿En qué te puedo ayudar hoy?")
+ *   data-api-base     umeiacore base URL (default: https://umeia.space)
+ *   data-color        accent color, any valid CSS color (default: #6c3ce0)
+ *   data-position     "bottom-right" | "bottom-left" (default: bottom-right)
+ *   data-title        header name (default: "Umeia Team")
+ *   data-subtitle     small line under the header name (default: "En línea")
+ *   data-greeting     bold greeting line in the header (default: "¡Hola! 👋")
+ *   data-description  line under the greeting (default: "¿En qué te puedo ayudar hoy?")
+ *   data-bubble-icon  "logo" (Umeia mark, default) | "chat" (plain speech-bubble
+ *                     glyph — for tenants that don't want Umeia's own branding
+ *                     showing in a widget embedded on their site)
+ *   data-qr-title     label above the opening quick-reply buttons
+ *                     (default: "Preguntas frecuentes")
+ *   data-quick-replies JSON array of {icon, label}, replacing the default
+ *                     Umeia-sales-pitch buttons. `icon` is one of the keys in
+ *                     QR_ICONS below (falls back to "chat" if unknown/omitted).
+ *                     Clicking a button sends its `label` as if the visitor
+ *                     had typed it — e.g. for a tenant whose menu.json root
+ *                     node has its own options, setting `label` to match one
+ *                     of those option labels exactly routes straight into it
+ *                     (see core/menu/navigator.py _match_option_single).
+ *   data-demo-label   label for the floating pill the quick-replies card
+ *                     collapses into on scroll (default: "Agendar demo")
+ *   data-demo-icon    icon key for that pill (default: "calendar")
+ *   data-demo-reply   message sent when that pill is clicked
+ *                     (default: same text as data-demo-label)
  *
  * Talks to umeiacore's webchat channel: POST {api-base}/webhook/webchat/message
  * (see core/webhook/webchat.py). No build step, no dependencies.
@@ -35,6 +53,11 @@
   var SUBTITLE = scriptTag.getAttribute("data-subtitle") || "En línea";
   var GREETING = scriptTag.getAttribute("data-greeting") || "¡Hola! 👋";
   var DESCRIPTION = scriptTag.getAttribute("data-description") || "¿En qué te puedo ayudar hoy?";
+  var BUBBLE_ICON = scriptTag.getAttribute("data-bubble-icon") || "logo";
+  var QR_TITLE = scriptTag.getAttribute("data-qr-title") || "Preguntas frecuentes";
+  var DEMO_LABEL = scriptTag.getAttribute("data-demo-label") || "Agendar demo";
+  var DEMO_REPLY = scriptTag.getAttribute("data-demo-reply") || DEMO_LABEL;
+  var DEMO_ICON = scriptTag.getAttribute("data-demo-icon") || "calendar";
 
   // Umeia "U" mark (from umeia-projects/umeia-client-insights public/umeia-icon.png),
   // inlined so the widget stays a single dependency-free file.
@@ -50,11 +73,23 @@
   // Quick-reply shortcuts shown above the conversation — each just sends its
   // own label as if the visitor typed it, so it rides the same intent
   // classification as everything else (no separate code path to keep in sync).
-  var QUICK_REPLIES = [
+  var DEFAULT_QUICK_REPLIES = [
     { icon: "chat", label: "¿Qué es Umeia?" },
     { icon: "calendar", label: "Quiero agendar una reunión" },
     { icon: "price", label: "¿Cuánto cuesta?" }
   ];
+  var QUICK_REPLIES = DEFAULT_QUICK_REPLIES;
+  var quickRepliesAttr = scriptTag.getAttribute("data-quick-replies");
+  if (quickRepliesAttr) {
+    try {
+      var parsedQuickReplies = JSON.parse(quickRepliesAttr);
+      if (Array.isArray(parsedQuickReplies) && parsedQuickReplies.length) {
+        QUICK_REPLIES = parsedQuickReplies;
+      }
+    } catch (e) {
+      console.error("[umeia-widget] Invalid data-quick-replies JSON, using default.", e);
+    }
+  }
 
   // Height of the floating "Agendar demo" pill (.umeia-qr-collapsed), which
   // is positioned to straddle the header/messages seam exactly half-and-half
@@ -64,7 +99,10 @@
   var QR_ICONS = {
     chat: '<path d="M4 4h16a1 1 0 011 1v11a1 1 0 01-1 1H8l-4 4V6a2 2 0 012-2z"/>',
     calendar: '<path d="M7 2v2H5a2 2 0 00-2 2v13a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2h-2V2h-2v2H9V2H7zm-2 6h14v11H5V8z"/>',
-    price: '<path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15.5v1h-2v-1.1c-1.4-.3-2.5-1.2-2.6-2.7h1.7c.1.8.7 1.4 1.9 1.4 1.3 0 2-.6 2-1.4 0-.8-.6-1.2-2.1-1.6-2-.5-3.3-1.2-3.3-2.9 0-1.4 1.1-2.4 2.5-2.7V6.5h2v1c1.3.3 2.2 1.2 2.3 2.5h-1.7c-.1-.7-.6-1.3-1.7-1.3-1.2 0-1.8.5-1.8 1.2 0 .7.6 1 2 1.4 2.1.5 3.4 1.3 3.4 3.1 0 1.5-1.2 2.5-2.6 2.8z"/>'
+    price: '<path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15.5v1h-2v-1.1c-1.4-.3-2.5-1.2-2.6-2.7h1.7c.1.8.7 1.4 1.9 1.4 1.3 0 2-.6 2-1.4 0-.8-.6-1.2-2.1-1.6-2-.5-3.3-1.2-3.3-2.9 0-1.4 1.1-2.4 2.5-2.7V6.5h2v1c1.3.3 2.2 1.2 2.3 2.5h-1.7c-.1-.7-.6-1.3-1.7-1.3-1.2 0-1.8.5-1.8 1.2 0 .7.6 1 2 1.4 2.1.5 3.4 1.3 3.4 3.1 0 1.5-1.2 2.5-2.6 2.8z"/>',
+    pencil: '<path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>',
+    check: '<path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1.5 14.5l-4-4 1.41-1.41L10.5 13.67l5.59-5.59L17.5 9.5l-7 7z"/>',
+    info: '<path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>'
   };
 
   // Faint "nucleus" rings behind the header, concentrated on the right
@@ -143,9 +181,11 @@
     ".umeia-bubble {",
     "  position: absolute; inset: 0; z-index: 1; border-radius: 50%; border: none; cursor: pointer; padding: 0; overflow: hidden;",
     "  background: " + ACCENT_COLOR + "; box-shadow: 0 4px 16px rgba(0,0,0,0.3); transition: transform .15s ease;",
+    "  display: flex; align-items: center; justify-content: center;",
     "}",
     ".umeia-bubble:hover { transform: scale(1.06); }",
     ".umeia-bubble img { width: 100%; height: 100%; object-fit: cover; }",
+    ".umeia-bubble-svg { width: 52%; height: 52%; fill: #fff; }",
     ".umeia-bubble-dot {",
     "  position: absolute; right: 1px; bottom: 1px; width: 15px; height: 15px; z-index: 2;",
     "  border-radius: 50%; background: #2ecc71; border: 3px solid #fff;",
@@ -384,11 +424,23 @@
   root.className = "umeia-root";
   shadow.appendChild(root);
 
+  // "logo" (default) keeps the current Umeia-mark photo, sized to fill the
+  // circle via object-fit:cover. "chat" is a plain speech-bubble glyph for
+  // tenants that don't want Umeia's own branding on a widget embedded on
+  // their site — centered and sized down (see .umeia-bubble-svg) rather than
+  // stretched edge-to-edge like the logo photo.
+  function bubbleIconHtml() {
+    if (BUBBLE_ICON === "chat") {
+      return '<svg class="umeia-bubble-svg" viewBox="0 0 24 24">' + QR_ICONS.chat + "</svg>";
+    }
+    return '<img src="' + LOGO_SRC + '" alt="" />';
+  }
+
   var bubbleWrap = document.createElement("div");
   bubbleWrap.className = "umeia-bubble-wrap";
   bubbleWrap.innerHTML =
     '<div class="umeia-bubble-glow"></div>' +
-    '<button class="umeia-bubble" aria-label="Abrir chat"><img src="' + LOGO_SRC + '" alt="" /></button>' +
+    '<button class="umeia-bubble" aria-label="Abrir chat">' + bubbleIconHtml() + "</button>" +
     '<span class="umeia-bubble-dot"></span>';
   root.appendChild(bubbleWrap);
   var bubble = bubbleWrap.querySelector(".umeia-bubble");
@@ -454,7 +506,7 @@
     "</div>" +
     '<div class="umeia-quickreplies">' +
     '  <div class="umeia-qr-full">' +
-    '    <div class="umeia-qr-title">Preguntas frecuentes</div>' +
+    '    <div class="umeia-qr-title">' + QR_TITLE + "</div>" +
     quickReplyHtml() +
     "  </div>" +
     "</div>" +
@@ -464,8 +516,8 @@
     // positionQrCollapsedPill) since it depends on the header's actual
     // rendered height, which varies with GREETING/DESCRIPTION length.
     '<div class="umeia-qr-collapsed">' +
-    '  <span class="umeia-qr-collapsed-icon"><svg viewBox="0 0 24 24">' + QR_ICONS.calendar + "</svg></span>" +
-    '  <span class="umeia-qr-collapsed-label">Agendar demo</span>' +
+    '  <span class="umeia-qr-collapsed-icon"><svg viewBox="0 0 24 24">' + (QR_ICONS[DEMO_ICON] || QR_ICONS.calendar) + "</svg></span>" +
+    '  <span class="umeia-qr-collapsed-label">' + DEMO_LABEL + "</span>" +
     '  <span class="umeia-qr-chevron">›</span>' +
     "</div>" +
     '<div class="umeia-messages">' +
@@ -570,9 +622,8 @@
 
   messagesEl.addEventListener("scroll", updateQrCollapse, { passive: true });
   qrCollapsed.addEventListener("click", function () {
-    var demoReply = QUICK_REPLIES[1] ? QUICK_REPLIES[1].label : "Quiero agendar una reunión";
-    pushMessage("user", demoReply);
-    sendToServer(demoReply);
+    pushMessage("user", DEMO_REPLY);
+    sendToServer(DEMO_REPLY);
   });
 
   function renderMessage(role, text, ts) {

@@ -32,6 +32,46 @@ Optional attributes on the same tag:
 | `data-subtitle` | `En línea` | small line under the header title |
 | `data-greeting` | `¡Hola! 👋` | bold greeting line in the header |
 | `data-description` | `¿En qué te puedo ayudar hoy?` | line under the greeting |
+| `data-bubble-icon` | `logo` | `logo` (Umeia mark) \| `chat` (plain speech-bubble glyph, for tenants that don't want Umeia's own branding on their site) |
+| `data-qr-title` | `Preguntas frecuentes` | label above the opening quick-reply buttons |
+| `data-quick-replies` | Umeia's own FAQ buttons | JSON array of `{icon, label}` replacing the default buttons — see below |
+| `data-demo-label` | `Agendar demo` | label for the pill the quick-replies card collapses into on scroll |
+| `data-demo-icon` | `calendar` | icon key (see `data-quick-replies` below) for that pill |
+| `data-demo-reply` | same as `data-demo-label` | message sent when that pill is clicked |
+
+### `data-quick-replies`
+
+Replaces the default "¿Qué es Umeia? / Quiero agendar una reunión / ¿Cuánto
+cuesta?" buttons shown when the panel first opens. Clicking one sends its
+`label` as if the visitor had typed it, so for a tenant whose `menu.json` root
+node has its own options (see `tenant_configs/gremio.json`), setting `label`
+to match an option's label exactly routes straight into it instead of relying
+on any keyword/intent matching — `core/menu/navigator.py`'s
+`_match_option_single` matches on exact (accent/case-insensitive) label text.
+
+`icon` is one of `chat` \| `calendar` \| `price` \| `pencil` \| `check` \|
+`info` (falls back to `chat` if omitted/unknown). Example, from
+`adultos2000.html`'s embed of the `gremio` tenant — mirroring that tenant's
+own WhatsApp menu root options one-for-one:
+
+```html
+<script
+  src="https://webchat.umeia.io/widget.js"
+  data-tenant="gremio"
+  data-bubble-icon="chat"
+  data-qr-title="¿En qué situación estás?"
+  data-quick-replies='[
+    {"icon":"pencil","label":"Quiero inscribirme"},
+    {"icon":"check","label":"Ya estoy inscripto/a"},
+    {"icon":"info","label":"Quiero conocer la propuesta"},
+    {"icon":"chat","label":"Tengo otra consulta"}
+  ]'
+  data-demo-label="Conocer propuesta"
+  data-demo-reply="Quiero conocer la propuesta"
+  data-demo-icon="info"
+  async
+></script>
+```
 
 Each tenant must have a matching `webhook_mapping.webchat.allowed_origins`
 entry in its `tenant_configs/*.json` (umeiacore) listing the exact origin(s)
