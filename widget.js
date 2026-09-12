@@ -56,6 +56,14 @@
     { icon: "price", label: "¿Cuánto cuesta?" }
   ];
 
+  // How far the quick-replies card tucks up behind the header's bottom edge
+  // (cosmetic — lets its rounded top corners peek into the header rather
+  // than sitting as a flat sibling). Content inside the card (both the full
+  // list and the collapsed pill) is offset down by this same amount so it
+  // never lands in the zone hidden behind the header — see QR_HEADER_OVERLAP
+  // usages in the CSS and QR_COLLAPSED_HEIGHT below.
+  var QR_HEADER_OVERLAP = 34;
+
   var QR_ICONS = {
     chat: '<path d="M4 4h16a1 1 0 011 1v11a1 1 0 01-1 1H8l-4 4V6a2 2 0 012-2z"/>',
     calendar: '<path d="M7 2v2H5a2 2 0 00-2 2v13a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2h-2V2h-2v2H9V2H7zm-2 6h14v11H5V8z"/>',
@@ -256,11 +264,20 @@
     // instead of animating on a delay.
     ".umeia-quickreplies {",
     "  background: #fff; border-radius: 18px; box-shadow: 0 10px 30px rgba(20,10,50,0.18);",
-    "  flex-shrink: 0; position: relative; z-index: 1; margin: -34px 14px 0; overflow: hidden;",
+    "  flex-shrink: 0; position: relative; z-index: 1; margin: -" + QR_HEADER_OVERLAP + "px 14px 0; overflow: hidden;",
     "}",
-    ".umeia-qr-full { padding: 12px; }",
+    // Both the full list and the collapsed pill start their actual content
+    // QR_HEADER_OVERLAP below the card's own top edge — i.e. right at the
+    // header's bottom edge, not inside the -34px zone that's tucked behind
+    // it (see .umeia-quickreplies above). Without this, the "Preguntas
+    // frecuentes" label and — worse — the entire collapsed "Agendar demo"
+    // pill (whose content is vertically centered in a card as short as
+    // QR_COLLAPSED_HEIGHT) rendered underneath the opaque header and were
+    // invisible/unclickable.
+    ".umeia-qr-full { padding: " + QR_HEADER_OVERLAP + "px 12px 12px; }",
     ".umeia-qr-collapsed {",
-    "  position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; padding: 0 14px;",
+    "  position: absolute; top: " + QR_HEADER_OVERLAP + "px; left: 0; right: 0; bottom: 0;",
+    "  display: flex; align-items: center; gap: 10px; padding: 0 14px;",
     "  opacity: 0; cursor: pointer;",
     "}",
     ".umeia-qr-collapsed-icon {",
@@ -498,7 +515,11 @@
   // scrollTop on every scroll event (no CSS transition) so the collapse
   // tracks the drag 1:1 instead of animating on a delay.
   var QR_COLLAPSE_RANGE = 70;
-  var QR_COLLAPSED_HEIGHT = 52;
+  // 52px of actual visible pill below the header, plus the QR_HEADER_OVERLAP
+  // hidden behind it — without the +QR_HEADER_OVERLAP, the collapsed pill's
+  // centered icon/label landed entirely inside the hidden zone (invisible
+  // and unclickable, just showing a sliver of white behind the header).
+  var QR_COLLAPSED_HEIGHT = 52 + QR_HEADER_OVERLAP;
   var qrNaturalHeight = 0;
 
   // The two layers fade on non-overlapping slices of the same scroll
