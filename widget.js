@@ -294,16 +294,20 @@
 
     ".umeia-messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; background: #f7f6fb; }",
 
-    // Quick-reply (FAQ) card — flush right under the header, not overlapping
-    // it, so its "Preguntas frecuentes" label is never clipped. Its height is
-    // driven frame-by-frame from messages scrollTop (see updateQrCollapse),
-    // not a CSS transition, so it scrubs with the drag instead of animating
-    // on a delay. Collapses away to 0 (see QR_COLLAPSED_HEIGHT) since the
-    // "Agendar demo" pill it used to turn into now lives outside this card
-    // entirely — see .umeia-qr-collapsed below.
+    // Quick-reply (FAQ) card — pulled up by QR_PILL_HEIGHT/2 so its top edge
+    // starts exactly where the collapsed "Agendar demo" pill's top edge ends
+    // up (see .umeia-qr-collapsed below): both float half onto the header,
+    // half onto the white messages list, so the card reads as already being
+    // "in place" for where it collapses into. z-index 3 (above the header's
+    // 2) so that top half actually paints over the header instead of being
+    // hidden behind it. Its height is driven frame-by-frame from messages
+    // scrollTop (see updateQrCollapse), not a CSS transition, so it scrubs
+    // with the drag instead of animating on a delay. Collapses away to 0
+    // (see QR_COLLAPSED_HEIGHT) since the pill lives outside this card
+    // entirely once collapsed.
     ".umeia-quickreplies {",
     "  background: #fff; border-radius: 18px; box-shadow: 0 10px 30px rgba(20,10,50,0.18);",
-    "  flex-shrink: 0; position: relative; z-index: 1; margin: 0 14px 0; overflow: hidden;",
+    "  flex-shrink: 0; position: relative; z-index: 3; margin: -" + (QR_PILL_HEIGHT / 2) + "px 14px 0; overflow: hidden;",
     "}",
     ".umeia-qr-full { padding: 12px; }",
     // Deliberately its own element (sibling of .umeia-quickreplies, not a
