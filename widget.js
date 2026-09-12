@@ -253,6 +253,12 @@
     "    border-radius: 0;",
     "  }",
     "  .umeia-root.umeia-panel-open .umeia-bubble-wrap { display: none; }",
+    // iOS Safari (and some other mobile browsers) auto-zooms the page on
+    // focusing any input with a computed font-size under 16px, as an
+    // accessibility measure for legibility — visible as a small, jarring
+    // zoom-in the instant you tap the message field. 16px sidesteps that
+    // entirely; kept mobile-only so the desktop input's 14px is untouched.
+    "  .umeia-pill input { font-size: 16px; }",
     "}",
 
     // Header — dark gradient, holds identity row + a persistent greeting.
@@ -632,19 +638,20 @@
   var QR_HEIGHT_DEADBAND = 0.5;
   var lastAppliedQrHeight = null;
 
-  // Once collapseQuickReplies has fired (the visitor engaged), the card is
-  // meant to stay collapsed for good regardless of scroll position — but
-  // messagesEl still gets non-visitor-initiated scrollTop changes afterwards
-  // (sendToServer scrolling to reveal its own typing-indicator bubble, then
-  // back once the reply arrives — see its own updateQrCollapse call), which
-  // would otherwise recompute progress from a real scrollTop of 0 and
-  // silently re-expand the card right after collapseQuickReplies had just
-  // collapsed it. This flag makes that collapse stick until showQuickReplies
-  // (reset) explicitly clears it.
-  var qrForceCollapsed = false;
-
   function updateQrCollapse() {
-    if (qrForceCollapsed) return;
+    // scrollTop is 0 both when the visitor has scrolled to the top AND
+    // whenever there's simply nothing to scroll yet (a short conversation
+    // that doesn't overflow messagesEl) — those aren't distinguishable from
+    // scrollTop alone. Treating the latter as "scrolled to top" was the bug:
+    // right when collapseQuickReplies fires on engagement, the conversation
+    // is still this short (scrollTop pinned at 0 with no real overflow), so
+    // the very next scroll-driven recompute — e.g. the auto-scroll revealing
+    // the typing-indicator bubble that follows a heartbeat later — read that
+    // as "back at the top" and silently re-expanded the card straight back
+    // out. Skipping entirely while there's no real scrollable range leaves
+    // whatever collapseQuickReplies/showQuickReplies explicitly set alone
+    // until scrolling is actually meaningful.
+    if (messagesEl.scrollHeight <= messagesEl.clientHeight) return;
     var progress = Math.max(0, Math.min(1, messagesEl.scrollTop / QR_COLLAPSE_RANGE));
     var height = qrNaturalHeight + (QR_COLLAPSED_HEIGHT - qrNaturalHeight) * progress;
     if (lastAppliedQrHeight !== null && Math.abs(height - lastAppliedQrHeight) < QR_HEIGHT_DEADBAND) return;
@@ -667,10 +674,13 @@
   // especially on the taller fullscreen mobile sheet, leaving the full
   // ~230px list permanently in the way), this jumps straight to that same
   // collapsed end-state on engagement, with its own transition since there's
-  // no scroll gesture here to scrub it into place frame-by-frame.
+  // no scroll gesture here to scrub it into place frame-by-frame. It's just
+  // that jump, though, not a lock — scrolling the transcript afterwards
+  // still scrubs the card back open exactly as it did before any of this
+  // (see updateQrCollapse), same as scrolling down from the un-engaged
+  // state would collapse it without ever calling this function at all.
   var QR_COLLAPSE_TRANSITION = "height .32s cubic-bezier(0.16, 1, 0.3, 1), opacity .32s ease";
   function collapseQuickReplies() {
-    qrForceCollapsed = true;
     qrCard.style.transition = QR_COLLAPSE_TRANSITION;
     qrFull.style.transition = "opacity .32s ease";
     qrCollapsed.style.transition = "opacity .32s ease";
@@ -695,13 +705,16 @@
   // a new conversation (kebab menu → reset) — the full FAQ list is relevant
   // again once back at the root node.
   function showQuickReplies() {
-    qrForceCollapsed = false;
     qrCard.style.display = "";
     qrCollapsed.style.display = "";
     qrNaturalHeight = qrFull.offsetHeight;
     positionQrCollapsedPill();
     lastAppliedQrHeight = null;
     updateQrCollapse();
+  }
+
+  function scrollMessagesToBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
   messagesEl.addEventListener("scroll", updateQrCollapse, { passive: true });
@@ -719,7 +732,7 @@
       errBubble.textContent = text;
       errRow.appendChild(errBubble);
       messagesEl.appendChild(errRow);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      scrollMessagesToBottom();
       return errRow;
     }
 
@@ -753,7 +766,7 @@
 
     row.appendChild(col);
     messagesEl.appendChild(row);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    scrollMessagesToBottom();
     return row;
   }
 
@@ -828,7 +841,7 @@
     typingEl.className = "umeia-typing";
     typingEl.textContent = "Escribiendo...";
     messagesEl.appendChild(typingEl);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    scrollMessagesToBottom();
 
     var url = API_BASE + "/webhook/webchat/message?tenant_id=" + encodeURIComponent(TENANT_ID);
     var body = {
@@ -849,17 +862,6 @@
       })
       .then(function (data) {
         typingEl.remove();
-        // Removing the typing bubble can shrink messagesEl back down below
-        // its scrollTop (set below to reveal the typing bubble, which
-        // nudges the same "scroll" listener that drives the quick-replies
-        // collapse — see updateQrCollapse). The browser clamps scrollTop
-        // back down as a read, but nothing re-fires a "scroll" event just
-        // from removing content, so without this the card was left stuck
-        // faded/collapsed from a transient scroll that was never really the
-        // visitor scrolling — most visible right after a reset, where the
-        // silent hola's own typing bubble was enough to fade the card back
-        // out a second after showQuickReplies had just restored it.
-        updateQrCollapse();
         if (data.conversation_id) {
           conversationId = data.conversation_id;
           localStorage.setItem(CONVERSATION_KEY, conversationId);
@@ -874,7 +876,6 @@
       })
       .catch(function (err) {
         typingEl.remove();
-        updateQrCollapse();
         console.error("[umeia-widget] request failed:", err);
         renderMessage("error", "No pudimos enviar tu mensaje. Probá de nuevo en un momento.");
       })
