@@ -1094,12 +1094,18 @@
     root.classList.add("umeia-panel-open");
     opened = true;
     maybeGreet();
-    // A returning visitor who already has a conversation going (or, in
-    // data-hide-first-reply mode, already got the silent "hola") shouldn't
-    // see the quick-replies UI at all on reopen — it's just as stale then
-    // as it is mid-conversation (see hideQuickReplies), just encountered a
-    // turn earlier.
-    if (transcript.length > 0 || (HIDE_FIRST_REPLY && localStorage.getItem(GREETED_KEY))) {
+    // A returning visitor who already has a conversation going shouldn't see
+    // the quick-replies UI at all on reopen — it's just as stale then as it
+    // is mid-conversation (see hideQuickReplies), just encountered a turn
+    // earlier. `transcript` correctly reflects that in data-hide-first-reply
+    // mode too: the silent "hola" there deliberately never gets pushed to
+    // it (see maybeGreet), so it only gains entries once the visitor
+    // actually engages — GREETED_KEY is not a proxy for that, it only
+    // marks "we already sent the silent hola" (to avoid resending it), which
+    // happens on the very first open regardless of whether the visitor ever
+    // clicks anything; using it here hid the buttons for good after that
+    // first open even for someone who closed the panel without engaging.
+    if (transcript.length > 0) {
       hideQuickReplies();
     } else {
       // offsetHeight only resolves once the panel is actually laid out
