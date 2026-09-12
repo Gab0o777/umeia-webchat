@@ -632,7 +632,19 @@
   var QR_HEIGHT_DEADBAND = 0.5;
   var lastAppliedQrHeight = null;
 
+  // Once collapseQuickReplies has fired (the visitor engaged), the card is
+  // meant to stay collapsed for good regardless of scroll position — but
+  // messagesEl still gets non-visitor-initiated scrollTop changes afterwards
+  // (sendToServer scrolling to reveal its own typing-indicator bubble, then
+  // back once the reply arrives — see its own updateQrCollapse call), which
+  // would otherwise recompute progress from a real scrollTop of 0 and
+  // silently re-expand the card right after collapseQuickReplies had just
+  // collapsed it. This flag makes that collapse stick until showQuickReplies
+  // (reset) explicitly clears it.
+  var qrForceCollapsed = false;
+
   function updateQrCollapse() {
+    if (qrForceCollapsed) return;
     var progress = Math.max(0, Math.min(1, messagesEl.scrollTop / QR_COLLAPSE_RANGE));
     var height = qrNaturalHeight + (QR_COLLAPSED_HEIGHT - qrNaturalHeight) * progress;
     if (lastAppliedQrHeight !== null && Math.abs(height - lastAppliedQrHeight) < QR_HEIGHT_DEADBAND) return;
@@ -658,6 +670,7 @@
   // no scroll gesture here to scrub it into place frame-by-frame.
   var QR_COLLAPSE_TRANSITION = "height .32s cubic-bezier(0.16, 1, 0.3, 1), opacity .32s ease";
   function collapseQuickReplies() {
+    qrForceCollapsed = true;
     qrCard.style.transition = QR_COLLAPSE_TRANSITION;
     qrFull.style.transition = "opacity .32s ease";
     qrCollapsed.style.transition = "opacity .32s ease";
@@ -682,6 +695,7 @@
   // a new conversation (kebab menu → reset) — the full FAQ list is relevant
   // again once back at the root node.
   function showQuickReplies() {
+    qrForceCollapsed = false;
     qrCard.style.display = "";
     qrCollapsed.style.display = "";
     qrNaturalHeight = qrFull.offsetHeight;
@@ -936,26 +950,33 @@
   inputEl.addEventListener("keydown", function (e) {
     if (e.key === "Enter") handleSend();
   });
-  // Focusing the input (not just sending) opens the on-screen keyboard on
-  // mobile, which shrinks the fullscreen sheet's visible height
+  // On mobile, focusing the input (not just sending) opens the on-screen
+  // keyboard, which shrinks the fullscreen sheet's visible height
   // (syncMobileViewportHeight tracks visualViewport). If the quick-replies
   // card is still expanded at that point (visitor hasn't picked one), its
   // ~230px plus the header/inputrow/footer no longer fit the shrunk panel —
   // same overflow this already guards against elsewhere, just triggered by
   // the keyboard shrinking the panel instead of a tall header growing it —
   // and focusing then auto-scrolls the (now scrollable) panel, dragging the
-  // header half out of frame. Tapping the input to type your own message is
-  // just as much "engaging" as sending one, so retire the card right away.
+  // header half out of frame. Collapsing right away on focus avoids that.
   //
-  // Also tracked in this plain flag (rather than reading focus back off the
-  // DOM later) for syncMobileViewportHeight's fallback check below — `root`
-  // there is a plain <div>, not the shadow root, so it has no .activeElement
-  // to query, and re-deriving "is the input focused" from the shadow root
-  // felt like more moving parts than just remembering it.
+  // On desktop there's no keyboard, no overflow risk, and no reason to
+  // collapse before the visitor has actually done anything — clicking into
+  // the input just to position the cursor shouldn't yank the full FAQ list
+  // out of view before they've read it. Scrolling or actually sending (see
+  // pushMessage) still collapse it there, same as before this whole
+  // mobile-keyboard chain of fixes started.
+  //
+  // inputHasFocus itself is tracked regardless of platform (rather than
+  // reading focus back off the DOM later) for syncMobileViewportHeight's
+  // fallback check below — `root` there is a plain <div>, not the shadow
+  // root, so it has no .activeElement to query, and re-deriving "is the
+  // input focused" from the shadow root felt like more moving parts than
+  // just remembering it.
   var inputHasFocus = false;
   inputEl.addEventListener("focus", function () {
     inputHasFocus = true;
-    collapseQuickReplies();
+    if (isMobileLayout()) collapseQuickReplies();
   });
   inputEl.addEventListener("blur", function () {
     inputHasFocus = false;
@@ -1062,6 +1083,7 @@
   function syncMobileViewportHeight() {
     if (!isMobileLayout()) {
       panel.style.height = "";
+      panel.style.top = "";
       return;
     }
     var vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -1084,10 +1106,22 @@
       collapseQuickReplies();
     }
     panel.style.height = vh + "px";
+    // `position: fixed` tracks the *layout* viewport, not the *visual* one —
+    // when the keyboard opens, the visual viewport (what's actually on
+    // screen) can end up offset from the top of the layout viewport (iOS
+    // Safari in particular does this while the page is scrolled with the
+    // keyboard up). Without correcting for that offset here, the panel's
+    // `top: 0` no longer lines up with the true top of the visible area,
+    // leaving a gap at the bottom where the real page behind it shows
+    // through before the (mispositioned) panel resumes below it. Tracking
+    // offsetTop keeps the panel pinned to where the screen actually is.
+    var top = window.visualViewport ? window.visualViewport.offsetTop : 0;
+    panel.style.top = top + "px";
   }
 
   if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", syncMobileViewportHeight);
+    window.visualViewport.addEventListener("scroll", syncMobileViewportHeight);
   }
   window.addEventListener("resize", syncMobileViewportHeight);
 
