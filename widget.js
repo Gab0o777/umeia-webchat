@@ -281,7 +281,14 @@
     // of the kebab menu (it was visible, just not the actual click target).
     "  position: relative; z-index: 2; overflow: hidden;",
     "  background: linear-gradient(155deg, #140b28 0%, color-mix(in srgb, " + ACCENT_COLOR + " 55%, #140b28 45%) 130%);",
-    "  color: #fff; padding: 14px 16px 46px; flex-shrink: 0;",
+    // Bottom padding must clear QR_PILL_HEIGHT/2 (26px, how far the collapsed
+    // pill overlaps upward into the header — see positionQrCollapsedPill)
+    // *plus* QR_BACKDROP_SHADOW_MARGIN_TOP (24px, how much further up its
+    // backdrop reaches to hide the pill's own box-shadow) — 50px total. At
+    // 46px this was 4px short, so the opaque backdrop clipped into the
+    // bottom of the greeting's last line instead of landing on blank
+    // padding, chopping off descenders right where the pill/backdrop sits.
+    "  color: #fff; padding: 14px 16px 50px; flex-shrink: 0;",
     "}",
     ".umeia-header-pattern { position: absolute; inset: 0; z-index: 0; pointer-events: none; }",
     ".umeia-header-pattern svg { width: 100%; height: 100%; display: block; }",
