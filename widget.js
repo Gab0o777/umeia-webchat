@@ -1246,8 +1246,16 @@
     // Don't wait for the visualViewport resize event the keyboard closing
     // will eventually fire (there's often a noticeable lag) — blurring the
     // only thing that could have opened the keyboard means it's on its way
-    // down regardless, so restore the header/pill right away.
-    setKeyboardOpen(false);
+    // down regardless, so restore the header/pill right away. Calling the
+    // full sync (not just setKeyboardOpen) matters here: it also re-pins
+    // panel.style.height/top to the current visualViewport, which otherwise
+    // stay stuck at the smaller keyboard-open values until that laggy
+    // resize event finally arrives — leaving the now-taller header (greeting
+    // back, pill back) rendered inside a panel still sized/positioned for
+    // the keyboard being up, which is what clipped the header and cut the
+    // messages list short. The still-in-flight resize/scroll events keep
+    // correcting both in lockstep as the keyboard finishes animating down.
+    syncMobileViewportHeight();
   });
 
   emojiBtn.addEventListener("click", function (e) {
