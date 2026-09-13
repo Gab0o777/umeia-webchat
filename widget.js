@@ -707,20 +707,23 @@
   // design. Header height varies with GREETING/DESCRIPTION length, so this
   // is computed from the actual rendered header rather than hardcoded.
   //
-  // The backdrop behind it (.umeia-qr-collapsed-backdrop) is sized wider
-  // than just the pill's own box — it has to swallow the pill's box-shadow
-  // (0 10px 30px, i.e. ~20px reach above the box and ~40px below it) too,
-  // or the message row currently scrolled up underneath shows through
-  // faintly right at the shadow's edge as the visitor keeps scrolling past
-  // the fully-collapsed point.
-  var QR_BACKDROP_SHADOW_MARGIN_TOP = 24;
+  // The backdrop behind it (.umeia-qr-collapsed-backdrop) only needs to
+  // swallow the pill's box-shadow reach *below* the seam (~40px) — that's
+  // the part that would otherwise let a message row scrolled up underneath
+  // show through faintly at the shadow's edge. Above the seam is the header
+  // itself: solid navy already sits there natively, so there's nothing to
+  // hide and the backdrop must not extend past header.offsetHeight, or it
+  // paints its own (light) color flat across the header — cutting off the
+  // greeting text and hiding the top half of the pill's intended overlap
+  // instead of letting the header show around it as designed.
   var QR_BACKDROP_SHADOW_MARGIN_BOTTOM = 44;
   function positionQrCollapsedPill() {
-    var pillTop = header.offsetHeight - QR_PILL_HEIGHT / 2;
+    var headerHeight = header.offsetHeight;
+    var pillTop = headerHeight - QR_PILL_HEIGHT / 2;
     qrCollapsed.style.top = pillTop + "px";
-    qrCollapsedBackdrop.style.top = (pillTop - QR_BACKDROP_SHADOW_MARGIN_TOP) + "px";
+    qrCollapsedBackdrop.style.top = headerHeight + "px";
     qrCollapsedBackdrop.style.height =
-      (QR_PILL_HEIGHT + QR_BACKDROP_SHADOW_MARGIN_TOP + QR_BACKDROP_SHADOW_MARGIN_BOTTOM) + "px";
+      (pillTop + QR_PILL_HEIGHT + QR_BACKDROP_SHADOW_MARGIN_BOTTOM - headerHeight) + "px";
   }
 
   // The two layers fade on non-overlapping slices of the same scroll
