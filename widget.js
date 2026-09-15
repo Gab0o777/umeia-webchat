@@ -40,6 +40,17 @@
  *                     restating the whole welcome text. Default: unset
  *                     (existing behavior — the reply shows as a bubble).
  *
+ * URL query parameter (not a script attribute — this varies per visit, e.g.
+ * per link shared from another channel, not per embed):
+ *   ?umeia_send=TEXT  On load, opens the panel and sends TEXT to the bot as
+ *                     if the visitor had typed it (same "hola" handshake
+ *                     first, if needed, as a real visitor gets — see
+ *                     maybeGreet). Lets another channel (e.g. a WhatsApp
+ *                     menu option "Abrir webchat") deep-link straight into a
+ *                     specific flow instead of dropping the visitor on the
+ *                     opening quick-replies, e.g.
+ *                     https://webchat.umeia.io/adultos2000?umeia_send=Quiero%20inscribirme
+ *
  * Talks to umeiacore's webchat channel: POST {api-base}/webhook/webchat/message
  * (see core/webhook/webchat.py). No build step, no dependencies.
  */
@@ -1475,25 +1486,57 @@
   // reply entirely — the header stays on the static data-greeting, and
   // GREETED_KEY (not `transcript`, which never gets this exchange added
   // to it) remembers "already sent" across reopens/reloads.
-  function maybeGreet() {
+  // `onReady`, when passed, fires once the tenant's menu state is actually
+  // "root" server-side — immediately if this visitor was already greeted,
+  // otherwise after the "hola" round-trip completes — so a caller can chain
+  // a follow-up message (see the umeia_send auto-start below) without
+  // racing the state that message needs to land in. Backward compatible:
+  // every pre-existing call site passes no argument, so `onReady` is
+  // undefined there and this behaves exactly as before.
+  function maybeGreet(onReady) {
     if (HIDE_FIRST_REPLY) {
-      if (localStorage.getItem(GREETED_KEY)) return;
+      if (localStorage.getItem(GREETED_KEY)) {
+        if (onReady) onReady();
+        return;
+      }
       sendToServer("hola", null, function () {
         try {
           localStorage.setItem(GREETED_KEY, "1");
         } catch (e) { /* localStorage full or unavailable — degrade silently */ }
+        if (onReady) onReady();
       }, true);
       return;
     }
-    if (transcript.length === 0) sendToServer("hola", null, null, true);
+    if (transcript.length === 0) {
+      // A non-hidden tenant's "hola" reply is meant to render as a normal
+      // bot bubble (see the sendToServer onReply contract) — passing
+      // `onReady` straight through as onReply would swallow that bubble,
+      // so render it here ourselves before continuing.
+      sendToServer(
+        "hola",
+        null,
+        onReady
+          ? function (reply) {
+              pushMessage("bot", reply);
+              onReady();
+            }
+          : null,
+        true
+      );
+      return;
+    }
+    if (onReady) onReady();
   }
 
   var opened = false;
-  function openPanel() {
+  // `onGreeted`, when passed, threads straight through to maybeGreet — see
+  // its doc comment. Existing call sites (the launcher button click) don't
+  // pass one, so this doesn't change their behavior.
+  function openPanel(onGreeted) {
     panel.classList.add("umeia-open");
     root.classList.add("umeia-panel-open");
     opened = true;
-    maybeGreet();
+    maybeGreet(onGreeted);
     // A returning visitor who already has a conversation going shouldn't see
     // the full FAQ list on reopen — it's just as stale then as it is
     // mid-conversation (see collapseQuickReplies), just encountered a turn
@@ -1565,4 +1608,15 @@
   closeBtn.addEventListener("click", closePanel);
 
   renderAll();
+
+  // See ?umeia_send in the file header doc comment.
+  try {
+    var autoSendText = new URLSearchParams(location.search).get("umeia_send");
+    if (autoSendText) {
+      openPanel(function () {
+        pushMessage("user", autoSendText);
+        sendToServer(autoSendText);
+      });
+    }
+  } catch (e) { /* URLSearchParams unsupported (very old browser) — degrade silently */ }
 })();
