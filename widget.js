@@ -1523,8 +1523,21 @@
     // until actually laid out" issue as qrNaturalHeight above. Nothing
     // reruns it once the panel's real layout exists, so a returning
     // visitor reopening a saved conversation got stuck looking at scrollTop
-    // 0 instead of their last message. Re-run it now that layout is real.
-    if (messagesEl.lastElementChild) scrollRowIntoView(messagesEl.lastElementChild);
+    // 0 instead of their last message. Re-run it now that layout is real —
+    // deferred past collapseQuickReplies' own .32s transition (same 340ms
+    // margin it uses to clear its transition styles) when that ran just
+    // above, since qrCard's height (and so messagesEl's own available
+    // height) is still mid-animation otherwise, same as the height itself
+    // would be measured wrong before the "offsetHeight" fix above.
+    if (messagesEl.lastElementChild) {
+      if (transcript.length > 0) {
+        setTimeout(function () {
+          if (messagesEl.lastElementChild) scrollRowIntoView(messagesEl.lastElementChild);
+        }, 340);
+      } else {
+        scrollRowIntoView(messagesEl.lastElementChild);
+      }
+    }
     syncMobileViewportHeight();
     if (isMobileLayout()) {
       // Stop the page behind the fullscreen sheet from scrolling once the
