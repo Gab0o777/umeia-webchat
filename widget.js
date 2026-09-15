@@ -1517,6 +1517,14 @@
       lastAppliedQrHeight = null;
       updateQrCollapse();
     }
+    // renderAll() at script load runs while the panel (and everything
+    // inside it) is still display:none, so scrollRowIntoView's rect-based
+    // math there sees all-zero layout and lands on 0 — same "resolves to 0
+    // until actually laid out" issue as qrNaturalHeight above. Nothing
+    // reruns it once the panel's real layout exists, so a returning
+    // visitor reopening a saved conversation got stuck looking at scrollTop
+    // 0 instead of their last message. Re-run it now that layout is real.
+    if (messagesEl.lastElementChild) scrollRowIntoView(messagesEl.lastElementChild);
     syncMobileViewportHeight();
     if (isMobileLayout()) {
       // Stop the page behind the fullscreen sheet from scrolling once the
