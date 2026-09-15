@@ -885,6 +885,18 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
+  // Aligns a newly-added row's top with the top of the visible area rather
+  // than always jumping to the very bottom. For a short message this is a
+  // no-op in practice — the browser clamps scrollTop to its max valid value,
+  // which is the same "scrolled to bottom" position scrollMessagesToBottom
+  // produces — but for a reply taller than the visible area, it keeps the
+  // reply's beginning in view instead of scrolling straight past it, so the
+  // visitor doesn't have to scroll back up to read it from the start.
+  function scrollRowIntoView(row) {
+    var rowTop = row.getBoundingClientRect().top - messagesEl.getBoundingClientRect().top + messagesEl.scrollTop;
+    messagesEl.scrollTop = rowTop;
+  }
+
   // Scroll/wheel/touch-tied collapsing is desktop-only, per design — on
   // mobile the FAQ card stays fully expanded regardless of scrolling and
   // only collapses on the visitor's first message (see collapseQuickReplies,
@@ -1023,7 +1035,7 @@
 
     row.appendChild(col);
     messagesEl.appendChild(row);
-    scrollMessagesToBottom();
+    scrollRowIntoView(row);
     return row;
   }
 
