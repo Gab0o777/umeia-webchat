@@ -885,16 +885,35 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
-  // Aligns a newly-added row's top with the top of the visible area rather
-  // than always jumping to the very bottom. For a short message this is a
-  // no-op in practice — the browser clamps scrollTop to its max valid value,
-  // which is the same "scrolled to bottom" position scrollMessagesToBottom
-  // produces — but for a reply taller than the visible area, it keeps the
-  // reply's beginning in view instead of scrolling straight past it, so the
-  // visitor doesn't have to scroll back up to read it from the start.
+  // .umeia-qr-collapsed-backdrop is a solid layer purpose-built to hide any
+  // message content scrolled up underneath the collapsed quick-replies
+  // pill (see that CSS rule's comment) — once visible it sits pinned near
+  // the top of .umeia-messages regardless of scroll position, covering the
+  // pill's own box plus its shadow's reach. scrollRowIntoView needs to land
+  // a row's top below this line, not behind it, or a row scrolled flush to
+  // messagesEl's own top edge would have its first lines hidden under the
+  // pill. Measured live (rather than derived from the pill's own layout
+  // constants) so it stays correct regardless of header height, which
+  // shifts the pill/backdrop's position (see positionQrCollapsedPill).
+  function messagesTopOverlayHeight() {
+    var opacity = parseFloat(getComputedStyle(qrCollapsedBackdrop).opacity) || 0;
+    if (opacity <= 0) return 0;
+    var overlayBottom = qrCollapsedBackdrop.getBoundingClientRect().bottom - messagesEl.getBoundingClientRect().top;
+    return Math.max(0, overlayBottom);
+  }
+
+  // Aligns a newly-added row's top with the top of the visible area (just
+  // below the collapsed quick-replies pill, if it's showing — see
+  // messagesTopOverlayHeight) rather than always jumping to the very
+  // bottom. For a short message this is a no-op in practice — the browser
+  // clamps scrollTop to its max valid value, which is close to the same
+  // "scrolled to bottom" position scrollMessagesToBottom produces — but for
+  // a reply taller than the visible area, it keeps the reply's beginning in
+  // view instead of scrolling straight past it, so the visitor doesn't have
+  // to scroll back up to read it from the start.
   function scrollRowIntoView(row) {
     var rowTop = row.getBoundingClientRect().top - messagesEl.getBoundingClientRect().top + messagesEl.scrollTop;
-    messagesEl.scrollTop = rowTop;
+    messagesEl.scrollTop = rowTop - messagesTopOverlayHeight();
   }
 
   // Scroll/wheel/touch-tied collapsing is desktop-only, per design — on
