@@ -4,6 +4,7 @@
     { "source": "/", "destination": "/test.html", "permanent": false }
   ],
   "rewrites": [
-    { "source": "/adultos2000", "destination": "/adultos2000.html" }
+    { "source": "/adultos2000", "destination": "/adultos2000.html" },
+    { "source": "/2001", "destination": "/adultos2001.html" }
   ]
 }
