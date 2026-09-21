@@ -927,6 +927,37 @@
     messagesEl.scrollTop = rowTop - messagesTopOverlayHeight();
   }
 
+  // scrollRowIntoView's target can go negative when there isn't enough real
+  // content above the row to scroll through — the pill/backdrop float at a
+  // fixed spot in the panel regardless of scroll, so with nothing above the
+  // row (e.g. reopening a saved conversation that's just a single short
+  // greeting — see hasRealMessagesOverflow's comment on how common that is),
+  // the browser silently clamps scrollTop to 0 and the row's top stays
+  // trapped under the pill with no way to scroll further and reveal it.
+  // This reserves exactly that much scrollable headroom as an invisible
+  // spacer so the target is always reachable — scrolled straight past by
+  // the scrollRowIntoView call that follows it, so it's never actually
+  // seen. Only used from the "reopening a returning visitor's saved
+  // conversation" path (see openPanel) — the live/already-open path never
+  // hits this, real content is already accumulating there by the time
+  // anything collapses. Idempotent: safe to call every reopen without
+  // stacking spacers or leaving a stale one behind (px<=0 removes it).
+  var TOP_SPACER_CLASS = "umeia-top-spacer";
+  function ensureTopSpacer(px) {
+    var spacer = messagesEl.querySelector("." + TOP_SPACER_CLASS);
+    if (px <= 0) {
+      if (spacer) spacer.remove();
+      return;
+    }
+    if (!spacer) {
+      spacer = document.createElement("div");
+      spacer.className = TOP_SPACER_CLASS;
+      spacer.style.cssText = "flex-shrink:0;width:1px;";
+      messagesEl.insertBefore(spacer, messagesEl.firstChild);
+    }
+    spacer.style.height = px + "px";
+  }
+
   // Scroll/wheel/touch-tied collapsing is desktop-only, per design — on
   // mobile the FAQ card stays fully expanded regardless of scrolling and
   // only collapses on the visitor's first message (see collapseQuickReplies,
@@ -1575,7 +1606,12 @@
     if (messagesEl.lastElementChild) {
       if (transcript.length > 0) {
         setTimeout(function () {
-          if (messagesEl.lastElementChild) scrollRowIntoView(messagesEl.lastElementChild);
+          if (!messagesEl.lastElementChild) return;
+          // See ensureTopSpacer's doc comment: a short saved conversation
+          // may not have enough content above the last row for
+          // scrollRowIntoView to actually reach past the pill/backdrop.
+          ensureTopSpacer(messagesTopOverlayHeight());
+          scrollRowIntoView(messagesEl.lastElementChild);
         }, 340);
       } else {
         scrollRowIntoView(messagesEl.lastElementChild);
