@@ -358,8 +358,11 @@
     ".umeia-team-avatar:first-child { margin-left: 0; }",
     ".umeia-kebab-wrap { position: relative; flex-shrink: 0; }",
     ".umeia-kebab {",
-    "  background: transparent; border: none; color: rgba(255,255,255,.85); font-size: 16px; cursor: pointer;",
-    "  line-height: 1; width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; letter-spacing: 1px;",
+    // 22px was too small a tap target for what's the only way to reach
+    // "reset conversation" — bumped to 32px (in line with .umeia-close's
+    // 28px) without changing how big the ⋮ glyph itself reads.
+    "  background: transparent; border: none; color: rgba(255,255,255,.85); font-size: 18px; cursor: pointer;",
+    "  line-height: 1; width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; letter-spacing: 1px;",
     "}",
     ".umeia-kebab:hover { background: rgba(255,255,255,.15); }",
     ".umeia-kebab-menu {",
