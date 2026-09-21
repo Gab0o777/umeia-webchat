@@ -30,6 +30,11 @@
  *   data-demo-icon    icon key for that pill (default: "calendar")
  *   data-demo-reply   message sent when that pill is clicked
  *                     (default: same text as data-demo-label)
+ *   data-greet-bubble  text for the small callout that floats above the
+ *                     closed launcher button on page load, inviting
+ *                     first-time visitors to open the chat (default:
+ *                     "¿En qué podemos ayudarte?"). Only shown to visitors
+ *                     with no conversation yet — set to "" to disable it.
  *   data-hide-first-reply  "true" to silently send the "hola" auto-greet
  *                     (still needed so the tenant's menu sets its server-side
  *                     state to "root") without showing its reply anywhere —
@@ -84,6 +89,10 @@
   var DEMO_LABEL = scriptTag.getAttribute("data-demo-label") || "Agendar demo";
   var DEMO_REPLY = scriptTag.getAttribute("data-demo-reply") || DEMO_LABEL;
   var DEMO_ICON = scriptTag.getAttribute("data-demo-icon") || "calendar";
+  // Same null-vs-empty distinction as DESCRIPTION above — "" deliberately
+  // disables the greet bubble rather than falling back to the default text.
+  var greetBubbleAttr = scriptTag.getAttribute("data-greet-bubble");
+  var GREET_BUBBLE = greetBubbleAttr !== null ? greetBubbleAttr : "¿En qué podemos ayudarte?";
   // Mobile collapses into this generic pill instead of the demo one — see
   // collapseQuickReplies — since tapping it opens the quick-replies sheet
   // rather than sending DEMO_REPLY straight away.
@@ -226,6 +235,32 @@
     "  position: absolute; right: 1px; bottom: 1px; width: 15px; height: 15px; z-index: 2;",
     "  border-radius: 50%; background: #2ecc71; border: 3px solid #fff;",
     "}",
+
+    // First-visit nudge that floats above the closed launcher button — see
+    // GREET_BUBBLE/greetBubble below for when it's shown/hidden. Lives
+    // inside .umeia-bubble-wrap (not the document root) so the existing
+    // ".umeia-panel-open .umeia-bubble-wrap { display: none; }" rule above
+    // hides it for free whenever the panel is open, with no extra JS.
+    ".umeia-greet-bubble {",
+    "  position: absolute; bottom: 74px; " + POSITION + ": 0; z-index: 3; max-width: 200px;",
+    "  background: #fff; color: #201f26; font-size: 13.5px; font-weight: 600; line-height: 1.35;",
+    "  padding: 10px 10px 10px 14px; border-radius: 14px; box-shadow: 0 8px 24px rgba(20,10,50,.18);",
+    "  cursor: pointer; display: flex; align-items: center; gap: 6px;",
+    "  opacity: 0; transform: translateY(8px) scale(.96); pointer-events: none;",
+    "  transition: opacity .25s ease, transform .25s ease;",
+    "}",
+    ".umeia-greet-bubble.umeia-visible { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }",
+    // Speech-bubble tail pointing down at the launcher button.
+    ".umeia-greet-bubble::after {",
+    "  content: ''; position: absolute; bottom: -5px; " + POSITION + ": 24px;",
+    "  width: 11px; height: 11px; background: #fff; transform: rotate(45deg); border-radius: 0 0 3px;",
+    "}",
+    ".umeia-greet-bubble-close {",
+    "  background: rgba(32,31,38,.08); border: none; border-radius: 50%; width: 18px; height: 18px;",
+    "  flex-shrink: 0; color: #6b6478; font-size: 13px; line-height: 1; cursor: pointer; padding: 0;",
+    "  display: flex; align-items: center; justify-content: center;",
+    "}",
+    ".umeia-greet-bubble-close:hover { background: rgba(32,31,38,.16); }",
 
     ".umeia-panel {",
     "  position: fixed; bottom: 92px; " + POSITION + ": 20px; z-index: 2147483000;",
@@ -541,9 +576,17 @@
   bubbleWrap.innerHTML =
     '<div class="umeia-bubble-glow"></div>' +
     '<button class="umeia-bubble" aria-label="Abrir chat">' + bubbleIconHtml() + "</button>" +
-    '<span class="umeia-bubble-dot"></span>';
+    '<span class="umeia-bubble-dot"></span>' +
+    (GREET_BUBBLE
+      ? '<div class="umeia-greet-bubble" role="button" tabindex="0">' +
+        '  <span class="umeia-greet-bubble-text">' + GREET_BUBBLE + "</span>" +
+        '  <button class="umeia-greet-bubble-close" type="button" aria-label="Cerrar mensaje">×</button>' +
+        "</div>"
+      : "");
   root.appendChild(bubbleWrap);
   var bubble = bubbleWrap.querySelector(".umeia-bubble");
+  var greetBubble = bubbleWrap.querySelector(".umeia-greet-bubble");
+  var greetBubbleClose = bubbleWrap.querySelector(".umeia-greet-bubble-close");
 
   function quickReplyHtml() {
     return QUICK_REPLIES.map(function (qr, idx) {
@@ -1567,6 +1610,7 @@
     panel.classList.add("umeia-open");
     root.classList.add("umeia-panel-open");
     opened = true;
+    if (greetBubble) greetBubble.classList.remove("umeia-visible");
     maybeGreet(onGreeted);
     // A returning visitor who already has a conversation going shouldn't see
     // the full FAQ list on reopen — it's just as stale then as it is
@@ -1642,6 +1686,29 @@
     else openPanel();
   });
   closeBtn.addEventListener("click", closePanel);
+
+  if (greetBubble) {
+    greetBubble.addEventListener("click", function () {
+      if (!opened) openPanel();
+    });
+    // Own listener (not relying on bubble click delegation) so tapping ×
+    // dismisses just the nudge without also opening the panel.
+    greetBubbleClose.addEventListener("click", function (e) {
+      e.stopPropagation();
+      greetBubble.classList.remove("umeia-visible");
+    });
+    // Delayed so it doesn't fight the page's own load-in animations, and
+    // re-checked at fire time (not just scheduled once for empty transcript)
+    // because `transcript` only gains its first entry once the visitor's
+    // first open actually round-trips a reply — see maybeGreet — so a
+    // visitor who opens and closes within this window must still suppress
+    // the nudge once transcript catches up.
+    setTimeout(function () {
+      if (!opened && transcript.length === 0) {
+        greetBubble.classList.add("umeia-visible");
+      }
+    }, 1500);
+  }
 
   renderAll();
 
