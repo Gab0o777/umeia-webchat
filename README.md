@@ -40,6 +40,32 @@ Optional attributes on the same tag:
 | `data-demo-reply` | same as `data-demo-label` | message sent when that pill is clicked |
 | `data-hide-first-reply` | unset | `"true"` silently sends the "hola" auto-greet without showing its reply anywhere — see below |
 
+### Voice (`data-voice-agent-id`)
+
+| Attribute | Default | Description |
+|---|---|---|
+| `data-voice-agent-id` | unset | ElevenLabs (ElevenAgents) agent id — enables the voice card |
+| `data-voice-name` | `Catalina` | agent display name |
+| `data-voice-cta` | `¿Tenés dudas? Hablá con {name}` | card invitation line |
+
+When set, the greet bubble is replaced by a card above the launcher with
+"Hablar ahora" (live voice call) and a chat button (opens the panel). The
+ElevenLabs SDK (`@elevenlabs/client`, pinned, IIFE build from jsDelivr) is
+only downloaded on the first "Hablar ahora" click. Opening the chat panel
+ends any running call.
+
+No umeiacore involvement: the agent is public on the ElevenLabs side and
+protected there by its host allowlist (Settings → Security; `localhost` is
+not accepted, so test calls on `webchat.umeia.io/voice`) plus a daily call
+cap, max call duration and silence timeout — that's what keeps the free
+plan's 15 min/month from being burned.
+
+The agent's `abrir_agenda` **client tool** (no parameters) hands the visitor
+to this text chat: the widget hangs up, opens the panel and sends
+`data-demo-reply`, which starts the tenant's scheduling flow. Agent prompt,
+settings and knowledge base live in `voice/` (`catalina_agent.md`,
+`knowledge_base.txt`, exported from `tenant_configs/infoumeiaio.json`).
+
 ### `data-hide-first-reply`
 
 By default, the bot's actual "hola" auto-greet reply shows up as the first

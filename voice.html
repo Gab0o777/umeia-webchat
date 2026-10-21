@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Umeia widget — voz (Catalina)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: sans-serif; max-width: 640px; margin: 60px auto; padding: 0 20px; color: #222; }
+    code { background: #f2f2f2; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Umeia widget — voz</h1>
+  <p>
+    Same embed as <code>test.html</code> (tenant <code>infoumeiaio</code>) plus
+    <code>data-voice-agent-id</code>: the card above the bubble starts a voice
+    call with the ElevenLabs agent "Catalina". Calls only connect from hosts in
+    the agent's ElevenLabs allowlist (not localhost) — test the call itself on
+    <code>webchat.umeia.io/voice</code>.
+  </p>
+
+  <script
+    src="./widget.js"
+    data-tenant="infoumeiaio"
+    data-api-base="https://umeia.space"
+    data-title="Umeia Team"
+    data-voice-agent-id="agent_5601m5fcehzvfhgrwg7fs8m5hva0"
+    data-voice-name="Catalina"
+    async
+  ></script>
+</body>
+</html>

@@ -44,6 +44,16 @@
  *                     the panel reads as one clean screen instead of
  *                     restating the whole welcome text. Default: unset
  *                     (existing behavior — the reply shows as a bubble).
+ *   data-voice-agent-id  ElevenLabs (ElevenAgents) agent id. When set, the
+ *                     greet bubble is replaced by a voice card above the
+ *                     launcher ("¿Tenés dudas? Hablá con …" + "Hablar ahora"
+ *                     + a chat button) that starts a live voice call with
+ *                     that agent. The ElevenLabs SDK is only downloaded when
+ *                     the visitor actually presses "Hablar ahora". Default:
+ *                     unset (no voice, widget unchanged).
+ *   data-voice-name   the voice agent's display name (default: "Catalina")
+ *   data-voice-cta    the card's invitation line (default:
+ *                     "¿Tenés dudas? Hablá con {data-voice-name}")
  *
  * URL query parameter (not a script attribute — this varies per visit, e.g.
  * per link shared from another channel, not per embed):
@@ -98,6 +108,16 @@
   // rather than sending DEMO_REPLY straight away.
   var QR_MOBILE_LABEL = "Acciones rápidas";
   var HIDE_FIRST_REPLY = scriptTag.getAttribute("data-hide-first-reply") === "true";
+  var VOICE_AGENT_ID = scriptTag.getAttribute("data-voice-agent-id");
+  var VOICE_NAME = scriptTag.getAttribute("data-voice-name") || "Catalina";
+  var VOICE_CTA = scriptTag.getAttribute("data-voice-cta") || "¿Tenés dudas? Hablá con " + VOICE_NAME;
+  // Pinned (not @latest) so an SDK release can't change call behavior under
+  // a live site without a widget deploy. IIFE build exposes
+  // window.ElevenLabsClient — no module loader needed in this plain script.
+  var ELEVENLABS_SDK_URL = "https://cdn.jsdelivr.net/npm/@elevenlabs/client@1.29.0/dist/lib.iife.min.js";
+  // The voice card takes the greet bubble's place above the launcher — two
+  // floating callouts stacked on top of each other would just be noise.
+  if (VOICE_AGENT_ID) GREET_BUBBLE = "";
 
   // Umeia "U" mark (from umeia-projects/umeia-client-insights public/umeia-icon.png),
   // inlined so the widget stays a single dependency-free file.
@@ -546,7 +566,67 @@
     ".umeia-send svg { width: 15px; height: 15px; fill: #fff; margin-left: -1px; }",
 
     ".umeia-footer { text-align: center; font-size: 11px; color: #b3b1bd; padding: 6px 0 10px; background: #fff; flex-shrink: 0; }",
-    ".umeia-footer a { color: #b3b1bd; }"
+    ".umeia-footer a { color: #b3b1bd; }",
+
+    // Voice card (data-voice-agent-id) — floats above the launcher like the
+    // greet bubble does, inside .umeia-bubble-wrap so the mobile
+    // ".umeia-panel-open .umeia-bubble-wrap" rule hides it with the rest.
+    // Desktop needs its own rule: there the panel opens over the same spot.
+    ".umeia-voice-card {",
+    "  position: absolute; bottom: 76px; " + POSITION + ": 0; z-index: 3; width: 300px; max-width: calc(100vw - 40px);",
+    "  background: linear-gradient(155deg, #140b28 0%, #0d0a18 100%); color: #fff; border-radius: 22px;",
+    "  padding: 14px 14px 10px; box-shadow: 0 12px 34px rgba(20,10,50,.35); border: 1px solid rgba(255,255,255,.06);",
+    "  opacity: 0; transform: translateY(8px) scale(.96); pointer-events: none;",
+    "  transition: opacity .25s ease, transform .25s ease;",
+    "}",
+    ".umeia-voice-card.umeia-visible { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }",
+    ".umeia-root.umeia-panel-open .umeia-voice-card { display: none; }",
+    ".umeia-voice-close {",
+    "  position: absolute; top: 8px; " + (POSITION === "right" ? "right" : "left") + ": 8px; width: 20px; height: 20px; border-radius: 50%;",
+    "  border: none; background: rgba(255,255,255,.08); color: rgba(255,255,255,.6); font-size: 13px; line-height: 1;",
+    "  cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center;",
+    "}",
+    ".umeia-voice-close:hover { background: rgba(255,255,255,.16); color: #fff; }",
+    ".umeia-voice-in-call .umeia-voice-close { display: none; }",
+    ".umeia-voice-top { display: flex; align-items: center; gap: 12px; padding-right: 18px; }",
+    // Swirling orb — scaled live from the call's audio volume while
+    // connected (see voiceVolumeLoop); spins faster once the call is up.
+    ".umeia-voice-orb-wrap { width: 46px; height: 46px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }",
+    ".umeia-voice-orb {",
+    "  width: 46px; height: 46px; border-radius: 50%; position: relative; overflow: hidden;",
+    "  background: conic-gradient(from 0deg, #2a1170, " + ACCENT_COLOR + ", #f0c8ff, " + ACCENT_COLOR + ", #3d1a9e, #c86bff, #2a1170);",
+    "  animation: umeia-orb-spin 7s linear infinite; transition: transform .08s linear;",
+    "  box-shadow: 0 0 18px color-mix(in srgb, " + ACCENT_COLOR + " 55%, transparent);",
+    "}",
+    ".umeia-voice-orb::after {",
+    "  content: ''; position: absolute; inset: 0; border-radius: 50%;",
+    "  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 45%);",
+    "}",
+    ".umeia-voice-in-call .umeia-voice-orb { animation-duration: 2.2s; }",
+    "@keyframes umeia-orb-spin { to { rotate: 360deg; } }",
+    "@media (prefers-reduced-motion: reduce) { .umeia-voice-orb { animation: none; } }",
+    ".umeia-voice-title { font-size: 15px; font-weight: 600; line-height: 1.3; }",
+    ".umeia-voice-status { font-size: 12.5px; color: rgba(255,255,255,.7); margin-top: 3px; display: none; }",
+    ".umeia-voice-status.umeia-open { display: block; }",
+    ".umeia-voice-status.umeia-voice-error { color: #ffb3b3; }",
+    ".umeia-voice-actions { display: flex; align-items: center; gap: 10px; margin-top: 12px; }",
+    ".umeia-voice-call {",
+    "  flex: 1; height: 46px; border: none; border-radius: 999px; cursor: pointer; font-family: inherit;",
+    "  background: " + ACCENT_COLOR + "; color: #fff; font-size: 15px; font-weight: 600;",
+    "  display: flex; align-items: center; justify-content: center; gap: 8px; transition: filter .15s ease, background .2s ease;",
+    "}",
+    ".umeia-voice-call:hover { filter: brightness(1.1); }",
+    ".umeia-voice-call svg { width: 18px; height: 18px; fill: #fff; }",
+    ".umeia-voice-in-call .umeia-voice-call { background: #e5484d; }",
+    ".umeia-voice-in-call .umeia-voice-call svg { transform: rotate(135deg); }",
+    ".umeia-voice-chat {",
+    "  width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0; cursor: pointer; padding: 0;",
+    "  background: transparent; border: 1px solid rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center;",
+    "}",
+    ".umeia-voice-chat:hover { background: rgba(255,255,255,.08); }",
+    ".umeia-voice-chat svg { width: 20px; height: 20px; fill: #fff; }",
+    ".umeia-voice-credit { text-align: center; font-size: 10.5px; color: rgba(255,255,255,.35); margin-top: 8px; }",
+    ".umeia-voice-credit a { color: rgba(255,255,255,.45); }"
   ].join("\n");
 
   var host = document.createElement("div");
@@ -590,6 +670,30 @@
   var bubble = bubbleWrap.querySelector(".umeia-bubble");
   var greetBubble = bubbleWrap.querySelector(".umeia-greet-bubble");
   var greetBubbleClose = bubbleWrap.querySelector(".umeia-greet-bubble-close");
+
+  var PHONE_ICON =
+    '<svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2a1 1 0 011-.25 11.4 11.4 0 003.6.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1L6.6 10.8z"/></svg>';
+
+  var voiceCard = null;
+  if (VOICE_AGENT_ID) {
+    voiceCard = document.createElement("div");
+    voiceCard.className = "umeia-voice-card";
+    voiceCard.innerHTML =
+      '<button class="umeia-voice-close" type="button" aria-label="Cerrar">×</button>' +
+      '<div class="umeia-voice-top">' +
+      '  <div class="umeia-voice-orb-wrap"><div class="umeia-voice-orb"></div></div>' +
+      "  <div>" +
+      '    <div class="umeia-voice-title">' + VOICE_CTA + "</div>" +
+      '    <div class="umeia-voice-status" aria-live="polite"></div>' +
+      "  </div>" +
+      "</div>" +
+      '<div class="umeia-voice-actions">' +
+      '  <button class="umeia-voice-call" type="button">' + PHONE_ICON + '<span>Hablar ahora</span></button>' +
+      '  <button class="umeia-voice-chat" type="button" aria-label="Abrir chat"><svg viewBox="0 0 24 24">' + QR_ICONS.chat + "</svg></button>" +
+      "</div>" +
+      '<div class="umeia-voice-credit">Voz por <a href="https://elevenlabs.io" target="_blank" rel="noopener">ElevenLabs</a></div>';
+    bubbleWrap.appendChild(voiceCard);
+  }
 
   function quickReplyHtml() {
     return QUICK_REPLIES.map(function (qr, idx) {
@@ -1610,6 +1714,9 @@
   // its doc comment. Existing call sites (the launcher button click) don't
   // pass one, so this doesn't change their behavior.
   function openPanel(onGreeted) {
+    // The voice card (and its hang-up button) is hidden while the panel is
+    // open, so a call can't be left running out of sight.
+    if (voiceState !== "idle") endVoiceCall();
     panel.classList.add("umeia-open");
     root.classList.add("umeia-panel-open");
     opened = true;
@@ -1711,6 +1818,191 @@
         greetBubble.classList.add("umeia-visible");
       }
     }, 1500);
+  }
+
+  // --- Voice (data-voice-agent-id) -----------------------------------------
+  // A live call with an ElevenLabs agent straight from the browser (public
+  // agent restricted by its own host allowlist + daily call cap on the
+  // ElevenLabs side, so there's no umeiacore endpoint involved). The agent's
+  // `abrir_agenda` client tool hands the visitor over to this text chat's
+  // scheduling flow instead of collecting contact details by voice.
+  var voiceState = "idle"; // idle | connecting | connected
+  var voiceConversation = null;
+  var voiceSdkPromise = null;
+  var voiceRaf = null;
+  var VOICE_DISMISSED_KEY = STORAGE_PREFIX + "voice_dismissed";
+
+  function loadVoiceSdk() {
+    if (window.ElevenLabsClient) return Promise.resolve(window.ElevenLabsClient);
+    if (!voiceSdkPromise) {
+      voiceSdkPromise = new Promise(function (resolve, reject) {
+        var s = document.createElement("script");
+        s.src = ELEVENLABS_SDK_URL;
+        s.async = true;
+        s.onload = function () {
+          if (window.ElevenLabsClient) resolve(window.ElevenLabsClient);
+          else reject(new Error("ElevenLabsClient global missing"));
+        };
+        s.onerror = function () {
+          voiceSdkPromise = null; // allow a retry on the next click
+          reject(new Error("SDK load failed"));
+        };
+        document.head.appendChild(s);
+      });
+    }
+    return voiceSdkPromise;
+  }
+
+  function setVoiceStatus(text, isError) {
+    if (!voiceCard) return;
+    var el = voiceCard.querySelector(".umeia-voice-status");
+    el.textContent = text || "";
+    el.classList.toggle("umeia-open", !!text);
+    el.classList.toggle("umeia-voice-error", !!isError);
+  }
+
+  function setVoiceState(state) {
+    voiceState = state;
+    if (!voiceCard) return;
+    voiceCard.classList.toggle("umeia-voice-in-call", state !== "idle");
+    voiceCard.querySelector(".umeia-voice-call span").textContent = state === "idle" ? "Hablar ahora" : "Colgar";
+    if (state === "connecting") setVoiceStatus("Conectando…");
+    if (state === "idle") {
+      if (voiceRaf) cancelAnimationFrame(voiceRaf);
+      voiceRaf = null;
+      voiceCard.querySelector(".umeia-voice-orb").style.transform = "";
+    }
+  }
+
+  // Pulses the orb with whoever is talking — the agent's output volume while
+  // it speaks, the visitor's mic level while it listens.
+  function voiceVolumeLoop(mode) {
+    var orb = voiceCard.querySelector(".umeia-voice-orb");
+    function tick() {
+      if (!voiceConversation || voiceState !== "connected") return;
+      var v = 0;
+      try {
+        v = mode.current === "speaking" ? voiceConversation.getOutputVolume() : voiceConversation.getInputVolume();
+      } catch (e) { /* volume not available yet */ }
+      orb.style.transform = "scale(" + (1 + Math.min(v, 1) * 0.35).toFixed(3) + ")";
+      voiceRaf = requestAnimationFrame(tick);
+    }
+    voiceRaf = requestAnimationFrame(tick);
+  }
+
+  function endVoiceCall() {
+    var conv = voiceConversation;
+    voiceConversation = null;
+    if (voiceState !== "idle") setVoiceState("idle");
+    if (conv) {
+      try { conv.endSession(); } catch (e) { /* already closed */ }
+    }
+  }
+
+  // The agent decided the visitor wants to schedule — let it finish its
+  // "te abro el chat" line, then hang up and drop them into the text flow
+  // with the same message the "Agendar demo" pill sends.
+  function voiceHandoffToChat() {
+    setTimeout(function () {
+      endVoiceCall();
+      setVoiceStatus("");
+      openPanel(function () {
+        pushMessage("user", DEMO_REPLY);
+        sendToServer(DEMO_REPLY);
+      });
+    }, 1800);
+    return "Chat abierto. Despedite en una frase corta.";
+  }
+
+  function startVoiceCall() {
+    if (voiceState !== "idle") return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setVoiceStatus("Tu navegador no permite llamadas. Escribinos por el chat.", true);
+      return;
+    }
+    setVoiceState("connecting");
+    var mode = { current: "listening" };
+    // Ask for the mic ourselves first: a denial then gets a clear message
+    // instead of surfacing as a generic connection failure from the SDK.
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then(function (stream) {
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        return loadVoiceSdk();
+      })
+      .then(function (sdk) {
+        if (voiceState !== "connecting") return null; // hung up while loading
+        return sdk.Conversation.startSession({
+          agentId: VOICE_AGENT_ID,
+          connectionType: "webrtc",
+          clientTools: { abrir_agenda: voiceHandoffToChat },
+          onConnect: function () {
+            setVoiceState("connected");
+            setVoiceStatus("Te escucho…");
+          },
+          onDisconnect: function () {
+            voiceConversation = null;
+            if (voiceState !== "idle") {
+              setVoiceState("idle");
+              setVoiceStatus("Llamada finalizada. ¿Seguimos por el chat?");
+            }
+          },
+          onModeChange: function (m) {
+            mode.current = m.mode;
+            if (voiceState === "connected") {
+              setVoiceStatus(m.mode === "speaking" ? VOICE_NAME + " está hablando" : "Te escucho…");
+            }
+          },
+          onError: function (message) {
+            console.error("[umeia-widget] voice error:", message);
+          }
+        });
+      })
+      .then(function (conv) {
+        if (!conv) return;
+        if (voiceState === "idle") {
+          conv.endSession(); // hung up while connecting
+          return;
+        }
+        voiceConversation = conv;
+        voiceVolumeLoop(mode);
+      })
+      .catch(function (err) {
+        console.error("[umeia-widget] voice call failed:", err);
+        setVoiceState("idle");
+        var denied = err && (err.name === "NotAllowedError" || err.name === "SecurityError");
+        setVoiceStatus(
+          denied
+            ? "Necesitamos permiso para usar tu micrófono."
+            : "No pudimos conectar la llamada. Escribinos por el chat.",
+          true
+        );
+      });
+  }
+
+  if (voiceCard) {
+    voiceCard.querySelector(".umeia-voice-call").addEventListener("click", function () {
+      if (voiceState === "idle") startVoiceCall();
+      else {
+        endVoiceCall();
+        setVoiceStatus("");
+      }
+    });
+    voiceCard.querySelector(".umeia-voice-chat").addEventListener("click", function () {
+      openPanel();
+    });
+    voiceCard.querySelector(".umeia-voice-close").addEventListener("click", function () {
+      voiceCard.classList.remove("umeia-visible");
+      try { sessionStorage.setItem(VOICE_DISMISSED_KEY, "1"); } catch (e) { /* storage unavailable */ }
+    });
+    var voiceDismissed = false;
+    try { voiceDismissed = !!sessionStorage.getItem(VOICE_DISMISSED_KEY); } catch (e) { /* storage unavailable */ }
+    if (!voiceDismissed) {
+      setTimeout(function () {
+        voiceCard.classList.add("umeia-visible");
+      }, 1500);
+    }
+    window.addEventListener("pagehide", endVoiceCall);
   }
 
   renderAll();

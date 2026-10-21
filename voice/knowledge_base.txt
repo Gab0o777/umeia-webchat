@@ -1,0 +1,56 @@
+QUE ES UMEIA
+Umeia es una plataforma de inteligencia operacional que se opera como servicio. Conectamos las herramientas que ya usa tu empresa, organizamos los procesos, observamos la operacion en tiempo real, detectamos oportunidades de mejora y trabajamos de forma continua junto a tu equipo a traves de una plataforma propia. No entregamos una licencia de software para que tu equipo se las arregle solo, nos convertimos en parte de tu operacion.
+
+QUE PROBLEMA RESUELVE
+Tus canales pueden estar funcionando y tu operacion igual no. Las consultas llegan por WhatsApp, Instagram, formularios, email y campanias, algunas se responden, otras quedan sin seguimiento, y pocas empresas pueden saber que paso con cada oportunidad. El problema casi nunca es la falta de herramientas, es que nadie esta conectando y gobernando el sistema completo. Umeia conecta las partes y se hace responsable de que funcionen como una sola operacion.
+
+COMO FUNCIONA
+Umeia trabaja sobre lo que tu empresa ya tiene, sin reemplazarlo. Centralizamos WhatsApp, Instagram, Facebook, email, chat web, formularios y otros canales en una bandeja omnicanal para que ninguna conversacion quede aislada, conectamos esos canales con tu CRM, agenda, ecommerce, ERP o los sistemas que ya uses, y automatizamos con IA la clasificacion, el seguimiento y las derivaciones. Cada consulta puede tener un responsable, un estado, una proxima accion y trazabilidad completa. Por debajo, esto corre sobre una infraestructura propia que integra el CRM que uses hoy (por ejemplo Kommo, HubSpot u otros), tu WhatsApp Cloud API oficial, y cualquier sistema que tenga API, webhooks u otra forma segura de acceso.
+
+QUE INCLUYE LA OPERACION
+Bandeja omnicanal para centralizar todas las conversaciones digitales, seguimiento de oportunidades con responsable, estado y proxima accion, automatizacion de tareas repetitivas, derivaciones, avisos y actualizaciones entre sistemas, integraciones con CRM, turnos, facturacion, ecommerce, ERP, Moodle, bases de datos y APIs internas cuando esten disponibles, medicion que relaciona campanias, conversaciones, oportunidades y resultados, y operacion continua donde monitoreamos el funcionamiento, detectamos problemas y proponemos mejoras de forma mensual.
+
+DEL ANUNCIO AL RESULTADO
+No alcanza con saber cuantos formularios o mensajes genero una campania. Umeia conecta Google Ads, Meta Ads y otros canales con la operacion comercial para saber que paso despues de cada consulta, quien la atendio, cuanto tardo, en que etapa se pierden oportunidades y como se relaciona la inversion publicitaria con los resultados. Los anuncios generan demanda, Umeia ayuda a que esa demanda no se pierda dentro de la operacion.
+
+EL CANAL PRINCIPAL ES WHATSAPP PERO NO EL UNICO
+Podemos convertir tu WhatsApp en un canal institucional, ordenado y trazable, con un numero de la organizacion en vez del celular de una persona, todo el equipo trabajando sobre el mismo numero, historial completo de cada conversacion y avisos automaticos. La aprobacion y verificacion de numeros depende de las politicas de Meta. Pero esto no funciona solo con WhatsApp, tambien podemos centralizar e integrar Instagram, Facebook, email, chat web, formularios, CRM y otros sistemas operativos.
+
+COMO ES EL PROCESO DE IMPLEMENTACION
+El proceso tiene cinco etapas, diagnostico del stack y los procesos actuales, definicion de arquitectura y alcance, conexion de canales, CRM y sistemas internos, pruebas con casos reales y capacitacion del equipo antes del despliegue, y por ultimo operacion, monitoreo y mejora continua. No entregamos una herramienta suelta y desaparecemos, seguimos el funcionamiento despues del lanzamiento.
+
+TENGO QUE CAMBIAR MI CRM
+No necesariamente. Si tu CRM actual puede adaptarse a la operacion, trabajamos sobre el. Tambien podemos recomendar un cambio cuando exista una razon operativa concreta, pero no es un requisito de entrada.
+
+QUE PASA SI NO TENGO CRM
+Podemos implementar una bandeja omnicanal con seguimiento, responsables, automatizaciones e integraciones sin obligarte a contratar un CRM tradicional.
+
+UMEIA TAMBIEN SE OCUPA DE ANUNCIOS WEB Y EMBUDOS
+Umeia puede coordinar esas areas dentro de la operacion completa. Podemos trabajar con tus proveedores actuales de ads o desarrollo web, o incorporar especialistas cuando sea necesario.
+
+TENGO QUE REEMPLAZAR A MI AGENCIA O WEBMASTER
+No. Nos acoplamos a los equipos y proveedores que ya tenes, conectamos su trabajo con la operacion y establecemos responsabilidades claras entre todos.
+
+QUIEN ES DUEÑO DE LAS CUENTAS Y LOS DATOS
+El cliente. Las cuentas publicitarias, los dominios, los sistemas, los datos y los activos digitales quedan siempre bajo control de tu organizacion. Las configuraciones e integraciones se documentan de acuerdo al alcance contratado.
+
+CUANTO DEMORA LA IMPLEMENTACION
+Depende del volumen, los canales, los procesos y las integraciones necesarias. El alcance y el cronograma se definen despues del diagnostico inicial.
+
+QUIEN HACE EL TRABAJO
+El diseno, la implementacion, las integraciones y el monitoreo los hace el equipo de Umeia. Tu equipo participa en las definiciones y en la validacion de los procesos, no tenes que armar un area tecnica propia.
+
+QUE PLANES TIENE UMEIA
+Hay cuatro niveles. Start es para resolver una necesidad concreta y arrancar sin friccion, por ejemplo conversaciones, seguimiento, ecommerce, ads, turnos o una integracion puntual. Growth es para conectar varias partes de la operacion como un solo sistema, con implementacion hibrida, monitoreo continuo y automatizaciones avanzadas, recomendado para quienes buscan control e integraciones reales. Enterprise es para operar todo el ecosistema, multiples areas, sedes y sistemas criticos, con arquitectura a medida. White Label Partner es para agencias, consultores e integradores que quieren ofrecer Umeia bajo su propia marca como una nueva unidad de negocio, con plataforma propia, equipo tecnico detras, procesos y portal para sus clientes.
+
+CUANTO CUESTA
+El plan Start arranca con un setup desde USD 800 y una mensualidad desde USD 300, escalable segun los modulos e integraciones que actives. El plan Growth arranca con un setup desde USD 2000 y una mensualidad desde USD 600. Enterprise y White Label Partner son a medida, se cotizan segun diagnostico y alcance. Los valores finales siempre se ajustan segun volumen operativo, canales, integraciones requeridas, nivel de automatizacion e infraestructura, por eso el numero exacto para tu caso sale del diagnostico.
+
+QUE ES EL PROGRAMA WHITE LABEL
+Es el plan pensado para agencias de marketing, consultores e integradores que quieren incorporar Umeia bajo su propia marca y convertirlo en una nueva linea de negocio, con ingresos recurrentes. Incluye la plataforma operativa con la identidad del partner, el equipo tecnico de Umeia trabajando detras, la metodologia y los playbooks, y un portal propio para el partner y para sus clientes. Un ejemplo real es Metodo Clinico, una consultora de marketing medico que opera bajo marca blanca junto a Umeia en clinicas y centros de estetica de varios paises.
+
+PARA QUE TIPO DE EMPRESAS ES UMEIA
+Trabajamos con organizaciones de sectores muy distintos, salud y clinicas, inmobiliarias y construccion, educacion, ecommerce y distribucion, servicios B2B, clubes e instituciones, gobierno y ONGs, y tambien con agencias y consultoras que quieren revenderlo bajo su marca. Lo que tienen en comun los casos donde Umeia encaja es que reciben consultas por varios canales, ya generan demanda (organica o paga) y hoy pierden valor porque nadie gobierna esa operacion de punta a punta.
+
+COMO EMPIEZO
+El primer paso es un diagnostico operacional, gratuito y sin compromiso, donde miramos que sistemas usas, por donde entran tus consultas y donde se esta perdiendo valor hoy. Con eso definimos el alcance y coordinamos una reunion para revisar tu caso puntual y armar una propuesta. Si queres coordinar ese diagnostico o la reunion, contamelo y arrancamos con un par de preguntas rapidas para llegar con contexto.
