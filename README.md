@@ -48,11 +48,19 @@ Optional attributes on the same tag:
 | `data-voice-name` | `Catalina` | agent display name |
 | `data-voice-cta` | `¿Tenés dudas? Hablá con {name}` | card invitation line |
 
-When set, the greet bubble is replaced by a card above the launcher with
-"Hablar ahora" (live voice call) and a chat button (opens the panel). The
-ElevenLabs SDK (`@elevenlabs/client`, pinned, IIFE build from jsDelivr) is
-only downloaded on the first "Hablar ahora" click. Opening the chat panel
-ends any running call.
+When set, a card ("¿Tenés dudas? Hablá con …", "Hablar ahora" + a chat
+button) takes the launcher's place — the round launcher and the greet bubble
+are hidden while it shows, so there's only one floating element. Its ×
+minimizes it back to the plain launcher for the rest of the browser session;
+the panel header then has a 📞 button to start a call.
+
+A call runs inside the chat panel: the input row is replaced by a call bar
+(orb, status, hang-up) and both sides are transcribed live into the message
+list (captioned "🎙", saved with the rest of the transcript). Closing the
+panel hangs up. The ElevenLabs SDK (`@elevenlabs/client`, pinned, IIFE build
+from jsDelivr) is only downloaded on the first call, and connects over
+WebSocket — the agent's allowlist rejects sessions with no Origin header,
+which the WebRTC transport doesn't send.
 
 No umeiacore involvement: the agent is public on the ElevenLabs side and
 protected there by its host allowlist (Settings → Security; `localhost` is
