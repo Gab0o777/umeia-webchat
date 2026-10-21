@@ -74,6 +74,17 @@ to this text chat: the widget hangs up, opens the panel and sends
 settings and knowledge base live in `voice/` (`catalina_agent.md`,
 `knowledge_base.txt`, exported from `tenant_configs/infoumeiaio.json`).
 
+### JS API
+
+`window.umeiaWidget.open(text?)` opens the chat panel from the host page and,
+when `text` is given, sends it as the visitor's message (after the usual
+"hola" handshake) — the no-reload equivalent of `?umeia_send=`. The widget
+loads `async`, so check it exists and keep a normal link as fallback:
+
+```html
+<a href="#contacto" onclick="if (window.umeiaWidget) { event.preventDefault(); umeiaWidget.open('Quiero agendar una reunión'); }">Agendar</a>
+```
+
 ### `data-hide-first-reply`
 
 By default, the bot's actual "hola" auto-greet reply shows up as the first

@@ -66,6 +66,10 @@
  *                     opening quick-replies, e.g.
  *                     https://webchat.umeia.io/adultos2000?umeia_send=Quiero%20inscribirme
  *
+ * JS API (for the host page): window.umeiaWidget.open(text?) opens the panel
+ * and, with `text`, sends it as the visitor's message — same as ?umeia_send
+ * but without a reload, e.g. for a "Agendá una demo" button.
+ *
  * Talks to umeiacore's webchat channel: POST {api-base}/webhook/webchat/message
  * (see core/webhook/webchat.py). No build step, no dependencies.
  */
@@ -2069,14 +2073,30 @@
 
   renderAll();
 
+  // Opens the panel and, if `text` is given, sends it as if the visitor had
+  // typed it — after the same "hola" handshake a real visitor gets (see
+  // maybeGreet). Shared by ?umeia_send and window.umeiaWidget.open.
+  function openAndSend(text) {
+    if (!text) {
+      if (!opened) openPanel();
+      return;
+    }
+    var send = function () {
+      pushMessage("user", text);
+      sendToServer(text);
+    };
+    if (opened) maybeGreet(send);
+    else openPanel(send);
+  }
+
+  // Public API for the host page, e.g. a "Agendá una demo" button:
+  //   window.umeiaWidget.open("Quiero agendar una reunión")
+  // Loaded async, so pages should check it exists and fall back otherwise.
+  window.umeiaWidget = { open: openAndSend };
+
   // See ?umeia_send in the file header doc comment.
   try {
     var autoSendText = new URLSearchParams(location.search).get("umeia_send");
-    if (autoSendText) {
-      openPanel(function () {
-        pushMessage("user", autoSendText);
-        sendToServer(autoSendText);
-      });
-    }
+    if (autoSendText) openAndSend(autoSendText);
   } catch (e) { /* URLSearchParams unsupported (very old browser) — degrade silently */ }
 })();
