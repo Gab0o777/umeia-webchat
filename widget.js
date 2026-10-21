@@ -578,7 +578,7 @@
     ".umeia-voice-card {",
     "  position: absolute; bottom: 0; " + POSITION + ": 0; z-index: 3; width: 300px; max-width: calc(100vw - 40px);",
     "  background: linear-gradient(155deg, #140b28 0%, #0d0a18 100%); color: #fff; border-radius: 22px;",
-    "  padding: 14px 14px 10px; box-shadow: 0 12px 34px rgba(20,10,50,.35); border: 1px solid rgba(255,255,255,.06);",
+    "  padding: 14px; box-shadow: 0 12px 34px rgba(20,10,50,.35); border: 1px solid rgba(255,255,255,.06);",
     "  display: none; animation: umeia-panel-in .32s cubic-bezier(0.16, 1, 0.3, 1) both;",
     "}",
     ".umeia-root.umeia-voice-card-on .umeia-voice-card { display: block; }",
@@ -622,8 +622,6 @@
     "}",
     ".umeia-voice-chat:hover { background: rgba(255,255,255,.08); }",
     ".umeia-voice-chat svg { width: 20px; height: 20px; fill: #fff; }",
-    ".umeia-voice-credit { text-align: center; font-size: 10.5px; color: rgba(255,255,255,.35); margin-top: 8px; }",
-    ".umeia-voice-credit a { color: rgba(255,255,255,.45); }",
 
     // Phone button in the panel header (next to the kebab).
     ".umeia-call-btn {",
@@ -712,8 +710,7 @@
       '<div class="umeia-voice-actions">' +
       '  <button class="umeia-voice-call" type="button">' + PHONE_ICON + '<span>Hablar ahora</span></button>' +
       '  <button class="umeia-voice-chat" type="button" aria-label="Abrir chat"><svg viewBox="0 0 24 24">' + QR_ICONS.chat + "</svg></button>" +
-      "</div>" +
-      '<div class="umeia-voice-credit">Voz por <a href="https://elevenlabs.io" target="_blank" rel="noopener">ElevenLabs</a></div>';
+      "</div>";
     bubbleWrap.appendChild(voiceCard);
   }
 
